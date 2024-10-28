@@ -1,7 +1,6 @@
 // src/components/UserDashboard.jsx
 
 import React from 'react';
-import UserNavbar from './UserNavbar';
 
 const UserDashboard = () => {
     return (
@@ -12,7 +11,6 @@ const UserDashboard = () => {
                 <p className="mt-2 text-sm">Welcome to your dashboard!</p>
             </header> */}
 
-            <UserNavbar />
         </div>
     );
 };

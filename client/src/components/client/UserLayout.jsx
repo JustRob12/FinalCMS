@@ -1,9 +1,10 @@
 // src/components/Layout.jsx
 
 import React from 'react';
-import Header from './Header';
+import Header from '../Header';
+import UserNavbar from './UserNavbar';
 
-const Layout = ({ user, setUser, children }) => {
+const UserLayout = ({ user, setUser, children }) => {
   const handleLogout = () => {
     localStorage.removeItem('user'); // Clear user from local storage
     setUser(null); // Clear user state
@@ -11,10 +12,13 @@ const Layout = ({ user, setUser, children }) => {
 
   return (
     <div>
+      
       <Header user={user} onLogout={handleLogout} />
+      <UserNavbar/>
       <main>{children}</main>
+      
     </div>
   );
 };
 
-export default Layout;
+export default UserLayout;

@@ -25,7 +25,7 @@ const Signup = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/signup`, formData);
+            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/auth/signup`, formData);
             alert('User created successfully');
             navigate('/login');
         } catch (error) {
