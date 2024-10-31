@@ -5,7 +5,7 @@ const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [updated, setUpdated] = useState(false); // State to trigger a re-fetch after updating
+  const [updated, setUpdated] = useState(false); // State to trigger a re-fetch
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL; // Accessing VITE_BACKEND_URL
 
@@ -33,37 +33,43 @@ const Orders = () => {
     };
 
     fetchOrders();
-  }, [backendUrl, updated]); // Add updated to re-fetch orders when it changes
+  }, [backendUrl, updated]); // Add 'updated' to trigger re-fetch
 
-  // Function to mark the order as ready
+  // Function to delete an order and send a notification
   const handleOrderReady = async (order) => {
-    console.log('Attempting to mark order as ready:', order._id); // Log the orderId
     try {
       const token = localStorage.getItem("token");
 
       if (!token) throw new Error("No authentication token found.");
 
-      // Create a notification with the order details
-      await axios.post(`${backendUrl}/notifications`, { // No '/api' prefix needed here since it's already included in the router
-        orderCode: order.orderCode,
-        userId: order.userId._id, 
-        totalPrice: order.totalPrice,
-      }, {
-        headers: {
+      // Step 1: Send a notification
+      await axios.post(
+        `${backendUrl}/notifications`,
+        {
+          orderCode: order.orderCode,
+          userId: order.userId._id,
+          totalPrice: order.totalPrice,
+        },
+        {
+          headers: {
             Authorization: `Bearer ${token}`,
-          },
+          }
+        }
+      );
+
+      // Step 2: Delete the order
+      await axios.delete(`${backendUrl}/orders/${order._id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
-      alert("Order marked as ready and notification sent!");
-      setUpdated(!updated); // Toggle updated state to trigger re-fetch
+      alert("Order marked as ready and deleted!");
+
+      setUpdated(!updated); // Trigger re-fetch
     } catch (err) {
-      if (err.response) {
-        console.error("Error response from server:", err.response.data);
-        alert("Failed to mark order as ready: " + err.response.data.message);
-      } else {
-        console.error("Error marking order as ready:", err);
-        alert("Failed to mark order as ready.");
-      }
+      console.error("Error marking order as ready:", err);
+      alert("Failed to mark order as ready.");
     }
   };
 
@@ -83,17 +89,15 @@ const Orders = () => {
               <th className="border px-4 py-2">Total Price</th>
               <th className="border px-4 py-2">Items</th>
               <th className="border px-4 py-2">Date</th>
-              <th className="border px-4 py-2">Actions</th> {/* New Actions column */}
+              <th className="border px-4 py-2">Actions</th>
             </tr>
           </thead>
           <tbody>
             {orders.map((order) => (
               <tr key={order._id} className="hover:bg-gray-100">
                 <td className="border px-4 py-2">{order.orderCode}</td>
-                <td className="border px-4 py-2">{order.userId?.name}</td>{" "}
-                <td className="border px-4 py-2">
-                  ₱{order.totalPrice.toFixed(2)}
-                </td>
+                <td className="border px-4 py-2">{order.userId?.name}</td>
+                <td className="border px-4 py-2">₱{order.totalPrice.toFixed(2)}</td>
                 <td className="border px-4 py-2">
                   <ul className="list-disc list-inside">
                     {order.items.map((item, index) => (
@@ -108,7 +112,7 @@ const Orders = () => {
                 </td>
                 <td className="border px-4 py-2">
                   <button
-                    onClick={() => handleOrderReady(order)} // Pass the entire order object
+                    onClick={() => handleOrderReady(order)}
                     className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
                   >
                     Order is Ready
