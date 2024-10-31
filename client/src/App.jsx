@@ -4,16 +4,17 @@ import AddFood from './components/Admin/AddFood';
 import AdminDashboard from './components/Admin/AdminDashboard';
 import AdminLayout from './components/Admin/AdminLayout';
 import DeployedOrders from './components/Admin/DeployedOrders';
+import HistoryAdmin from './components/Admin/HistoryAdmin'; // Import HistoryAdmin component
 import ManageAccounts from './components/Admin/ManageAccounts';
 import Orders from './components/Admin/Orders';
 import Reports from './components/Admin/Reports';
 import Home from './components/HomePage';
 import Login from './components/Login';
 import Signup from './components/Signup';
-import Cart from './components/client/Cart'; // Import Cart component
-import History from './components/client/History'; // Import History component
-import Menu from './components/client/Menu'; // Import Menu component
-import Notification from './components/client/Notification'; // Import Notification component
+import Cart from './components/client/Cart';
+import History from './components/client/History';
+import Menu from './components/client/Menu';
+import Notification from './components/client/Notification';
 import UserDashboard from './components/client/UserDashboard';
 import UserLayout from './components/client/UserLayout';
 
@@ -77,12 +78,14 @@ const App = () => {
           path="/manage-accounts"
           element={renderAdminLayout(<ManageAccounts />)}
         />
-          <Route
+        <Route
           path="/deployed-orders"
-          element={renderAdminLayout(<DeployedOrders/>)}
+          element={renderAdminLayout(<DeployedOrders />)}
         />
-        
-
+        <Route
+          path="/history-admin" // New route for HistoryAdmin
+          element={renderAdminLayout(<HistoryAdmin />)}
+        />
         
         {/* New routes for user components */}
         <Route

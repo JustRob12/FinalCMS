@@ -1,5 +1,3 @@
-// src/components/AdminNavbar.jsx
-
 import React, { useState } from 'react';
 import { AiOutlineMenu } from 'react-icons/ai';
 import {
@@ -130,6 +128,22 @@ const AdminNavbar = () => {
                         >
                             <MdNotifications className="w-6 h-6 mr-2" />
                             Deployed Orders
+                        </Link>
+                    </li>
+
+                    {/* History Admin Link */}
+                    <li className="p-2">
+                        <Link
+                            to="/history-admin"
+                            onClick={() => handleLinkClick('history-admin')}
+                            className={`flex items-center ${
+                                activeLink === 'history-admin'
+                                    ? 'text-indigo-600'
+                                    : 'text-gray-800 hover:text-indigo-600'
+                            }`}
+                        >
+                            <MdListAlt className="w-6 h-6 mr-2" />
+                            Order History
                         </Link>
                     </li>
                 </ul>
