@@ -1,14 +1,14 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 
-const History = () => {
+const HistoryAdmin = () => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
   useEffect(() => {
-    const fetchHistory = async () => {
+    const fetchAllHistory = async () => {
       try {
         const token = localStorage.getItem("token");
         if (!token) throw new Error("No authentication token found.");
@@ -19,14 +19,14 @@ const History = () => {
 
         setHistory(response.data);
       } catch (err) {
-        console.error("Error fetching history:", err);
-        setError("Failed to load history. Please try again later.");
+        console.error("Error fetching all history:", err);
+        setError("Failed to load all history. Please try again later.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchHistory();
+    fetchAllHistory();
   }, [backendUrl]);
 
   if (loading) return <p className="text-center mt-10">Loading...</p>;
@@ -34,7 +34,7 @@ const History = () => {
 
   return (
     <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold text-center mb-6">Order History</h1>
+      <h1 className="text-3xl font-bold text-center mb-6">All Order Histories</h1>
       {history.length === 0 ? (
         <p className="text-center mt-10">No order history available.</p>
       ) : (
@@ -53,11 +53,7 @@ const History = () => {
                 <td className="border px-4 py-2">{entry.orderCode}</td>
                 <td className="border px-4 py-2">₱{entry.totalPrice.toFixed(2)}</td>
                 <td className="border px-4 py-2">
-                  {entry.formattedDate ? (
-                    entry.formattedDate // Use the formatted date directly
-                  ) : (
-                    "Invalid Date"
-                  )}
+                  {entry.formattedDate ? entry.formattedDate : "Invalid Date"}
                 </td>
                 <td className="border px-4 py-2">
                   <ul className="list-inside">
@@ -77,4 +73,4 @@ const History = () => {
   );
 };
 
-export default History;
+export default HistoryAdmin;

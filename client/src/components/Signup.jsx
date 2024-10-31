@@ -75,14 +75,44 @@ const Signup = () => {
                         />
                     </div>
 
-                    <input
-                        type="text"
+                    {/* Dropdown for Course */}
+                    <select
                         name="course"
-                        placeholder="Course"
                         onChange={handleChange}
                         required
                         className="w-full px-3 py-2 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                    />
+                    >
+                        <option value="" disabled>Select Course</option>
+                        <option value="Bachelor of Science in Nursing">Bachelor of Science in Nursing</option>
+                        <option value="Bachelor of Elementary Education">Bachelor of Elementary Education</option>
+                        <option value="Bachelor of Early Childhood Education">Bachelor of Early Childhood Education</option>
+                        <option value="Bachelor of Special Needs Education">Bachelor of Special Needs Education</option>
+                        <option value="Bachelor Physical Education">Bachelor Physical Education</option>
+                        <option value="Bachelor of Technology and Livelihood Education major in Home Economics">Bachelor of Technology and Livelihood Education major in Home Economics</option>
+                        <option value="Bachelor of Technology and Livelihood Education major in Industrial Arts">Bachelor of Technology and Livelihood Education major in Industrial Arts</option>
+                        <option value="Bachelor of Secondary Education major in Filipino">Bachelor of Secondary Education major in Filipino</option>
+                        <option value="Bachelor of Secondary Education major in English">Bachelor of Secondary Education major in English</option>
+                        <option value="Bachelor of Secondary Education major in Mathematics">Bachelor of Secondary Education major in Mathematics</option>
+                        <option value="Bachelor of Secondary Education major in Science">Bachelor of Secondary Education major in Science</option>
+                        <option value="Bachelor in Industrial Technology Management major in Automotive Technology">Bachelor in Industrial Technology Management major in Automotive Technology</option>
+                        <option value="Bachelor of Science in Civil Engineering">Bachelor of Science in Civil Engineering</option>
+                        <option value="Bachelor of Science in Information Technology">Bachelor of Science in Information Technology</option>
+                        <option value="Bachelor of Science in Mathematics">Bachelor of Science in Mathematics</option>
+                        <option value="Bachelor of Science in Mathematics with Research Statistics">Bachelor of Science in Mathematics with Research Statistics</option>
+                        <option value="Bachelor of Science in Business Administration">Bachelor of Science in Business Administration</option>
+                        <option value="Bachelor of Science in Criminology">Bachelor of Science in Criminology</option>
+                        <option value="Bachelor of Science in Hospitality Management">Bachelor of Science in Hospitality Management</option>
+                        <option value="Bachelor of Science in Agribusiness Management">Bachelor of Science in Agribusiness Management</option>
+                        <option value="Bachelor of Science in Biology major in Animal Biology">Bachelor of Science in Biology major in Animal Biology</option>
+                        <option value="Bachelor of Science in Agriculture major in Animal Science">Bachelor of Science in Agriculture major in Animal Science</option>
+                        <option value="Bachelor of Science in Agriculture major in Crop Science">Bachelor of Science in Agriculture major in Crop Science</option>
+                        <option value="Bachelor of Science in Biology">Bachelor of Science in Biology</option>
+                        <option value="Bachelor of Science in Biology major in Ecology">Bachelor of Science in Biology major in Ecology</option>
+                        <option value="Bachelor of Science in Environmental Science">Bachelor of Science in Environmental Science</option>
+                        <option value="Bachelor of Science in Development Communication">Bachelor of Science in Development Communication</option>
+                        <option value="Bachelor of Arts in Political Science">Bachelor of Arts in Political Science</option>
+                        <option value="Bachelor of Science in Psychology">Bachelor of Science in Psychology</option>
+                    </select>
 
                     <input
                         type="text"

@@ -75,6 +75,67 @@ router.get('/accounts', async (req, res) => {
     }
 });
 
+// Delete a user account by ID
+router.delete('/accounts/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deletedUser = await User.findOneAndDelete({ id });
+        
+        if (!deletedUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        res.status(200).json({ message: 'User deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+// Update an account by ID
+router.put('/accounts/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, course, year } = req.body;
+
+        // Find and update the user by ID
+        const updatedUser = await User.findOneAndUpdate(
+            { id },
+            { name, course, year },
+            { new: true, runValidators: true } // Return the updated document and run validations
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.status(200).json({ message: 'User updated successfully', user: updatedUser });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Update access for an admin account
+router.patch('/accounts/access/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { hasAccess } = req.body;
+
+        const updatedUser = await User.findOneAndUpdate(
+            { id },
+            { hasAccess },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.status(200).json({ message: 'Access updated successfully', user: updatedUser });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 
 module.exports = router;

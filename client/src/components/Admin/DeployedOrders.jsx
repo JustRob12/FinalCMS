@@ -82,6 +82,42 @@ const DeployedOrders = () => {
     }
   };
 
+  const activateOrder = async (id) => {
+    const token = localStorage.getItem("token");
+    const notification = notifications.find(n => n._id === id); // Get the notification details
+  
+    if (!notification) {
+      console.error("Notification not found:", id);
+      return;
+    }
+  
+    const { userId, items, totalPrice } = notification; // Assuming these are part of your notification object
+    
+    // Get the current date and time
+    const activatedAt = new Date();
+  
+    try {
+      await axios.patch(`${backendUrl}/notifications/${id}/received`, { 
+        userId, 
+        items, 
+        totalPrice, 
+        activatedAt  // Include the activated date
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      alert("Order has been marked as received.");
+      setNotifications(notifications.filter(notification => notification._id !== id));
+    } catch (err) {
+      console.error("Error activating order:", err);
+      setError("Failed to activate order.");
+    }
+  };
+  
+  
+
+
   if (loading) return <p className="text-center mt-10">Loading...</p>;
   if (error) return <p className="text-center text-red-500 mt-10">{error}</p>;
 
@@ -113,9 +149,9 @@ const DeployedOrders = () => {
               <th className="border px-4 py-2">Order Code</th>
               <th className="border px-4 py-2">Name</th>
               <th className="border px-4 py-2">Total Price</th>
-              <th className="border px-4 py-2">Items</th> {/* New column for items */}
+              <th className="border px-4 py-2">Items</th>
               <th className="border px-4 py-2">Timer</th>
-              <th className="border px-4 py-2">Actions</th> {/* New column for actions */}
+              <th className="border px-4 py-2">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -137,7 +173,14 @@ const DeployedOrders = () => {
                   {notification.timeLeft > 0 ? formatTime(notification.timeLeft) : "Expired"}
                 </td>
                 <td className="border px-4 py-2">
-                  {notification.timeLeft <= 0 && (
+                  {notification.timeLeft > 0 ? (
+                    <button
+                      onClick={() => activateOrder(notification._id)}
+                      className="text-green-500 hover:underline mr-2"
+                    >
+                      Activate
+                    </button>
+                  ) : (
                     <button
                       onClick={() => handleDelete(notification._id)}
                       className="text-red-500 hover:underline"

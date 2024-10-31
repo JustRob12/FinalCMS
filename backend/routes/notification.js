@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Notification = require('../models/Notification');
 const verifyToken = require('../middleware/auth');
+const History = require("../models/history");
 
 // Create a notification
 router.post('/', verifyToken, async (req, res) => {
@@ -74,5 +75,41 @@ router.delete('/:id', verifyToken, async (req, res) => {
     res.status(500).json({ message: 'Failed to delete notification.', error: err.message });
   }
 });
+
+
+router.patch("/:id/received", verifyToken, async (req, res) => {
+  try {
+    const { userId, items, totalPrice, activatedAt } = req.body; // Include activatedAt
+
+    const notification = await Notification.findById(req.params.id);
+    
+    if (!notification) {
+      return res.status(404).json({ message: "Notification not found." });
+    }
+
+    const historyEntry = new History({
+      userId,
+      orderCode: notification.orderCode,
+      totalPrice,
+      items,
+      activatedAt,  // Include activatedAt in the history entry
+    });
+
+    await historyEntry.save();
+    await notification.deleteOne();
+
+    res.json({ message: "Order marked as received and added to history." });
+  } catch (error) {
+    console.error("Error marking order as received:", error.message); // Log the specific error message
+    res.status(500).json({ message: "Server error.", error: error.message });
+  }
+});
+
+
+
+
+
+
+
 
 module.exports = router;
