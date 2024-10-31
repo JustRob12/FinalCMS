@@ -35,43 +35,50 @@ const Orders = () => {
     fetchOrders();
   }, [backendUrl, updated]); // Add 'updated' to trigger re-fetch
 
-  // Function to delete an order and send a notification
   const handleOrderReady = async (order) => {
     try {
       const token = localStorage.getItem("token");
-
+  
       if (!token) throw new Error("No authentication token found.");
-
-      // Step 1: Send a notification
+  
+      const notificationData = {
+        orderCode: order.orderCode,
+        userId: order.userId._id,
+        totalPrice: order.totalPrice,
+        items: order.items.map(item => ({
+          foodName: item.foodId?.name,
+          quantity: item.quantity,
+        })),
+        createdAt: order.createdAt,
+      };
+  
+      // Step 1: Send a notification with items, price, and date
       await axios.post(
         `${backendUrl}/notifications`,
-        {
-          orderCode: order.orderCode,
-          userId: order.userId._id,
-          totalPrice: order.totalPrice,
-        },
+        notificationData,
         {
           headers: {
             Authorization: `Bearer ${token}`,
           }
         }
       );
-
+  
       // Step 2: Delete the order
       await axios.delete(`${backendUrl}/orders/${order._id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-
+  
       alert("Order marked as ready and deleted!");
-
+  
       setUpdated(!updated); // Trigger re-fetch
     } catch (err) {
       console.error("Error marking order as ready:", err);
       alert("Failed to mark order as ready.");
     }
   };
+  
 
   if (loading) return <p className="text-center mt-10">Loading...</p>;
   if (error) return <p className="text-center text-red-500 mt-10">{error}</p>;

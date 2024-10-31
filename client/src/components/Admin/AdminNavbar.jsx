@@ -1,27 +1,28 @@
 // src/components/AdminNavbar.jsx
 
 import React, { useState } from 'react';
-import { AiOutlineMenu } from 'react-icons/ai'; // Menu icon for toggling
+import { AiOutlineMenu } from 'react-icons/ai';
 import {
     MdDashboard,
     MdFastfood,
     MdListAlt,
     MdManageAccounts,
+    MdNotifications,
     MdReport,
-} from 'react-icons/md'; // Icons for options
-import { Link } from 'react-router-dom'; // Import Link from react-router-dom
+} from 'react-icons/md'; // Added MdNotifications for "Deployed Orders" icon
+import { Link } from 'react-router-dom';
 
 const AdminNavbar = () => {
     const [isOpen, setIsOpen] = useState(false);
-    const [activeLink, setActiveLink] = useState('dashboard'); // Track active link
+    const [activeLink, setActiveLink] = useState('dashboard');
 
     const toggleNavbar = () => {
         setIsOpen((prev) => !prev);
     };
 
     const handleLinkClick = (link) => {
-        setActiveLink(link); // Update the active link state
-        setIsOpen(false); // Optional: Close navbar after clicking (for mobile)
+        setActiveLink(link);
+        setIsOpen(false);
     };
 
     return (
@@ -113,6 +114,22 @@ const AdminNavbar = () => {
                         >
                             <MdManageAccounts className="w-6 h-6 mr-2" />
                             Manage Accounts
+                        </Link>
+                    </li>
+
+                    {/* Deployed Orders Link */}
+                    <li className="p-2">
+                        <Link
+                            to="/deployed-orders"
+                            onClick={() => handleLinkClick('deployed-orders')}
+                            className={`flex items-center ${
+                                activeLink === 'deployed-orders'
+                                    ? 'text-indigo-600'
+                                    : 'text-gray-800 hover:text-indigo-600'
+                            }`}
+                        >
+                            <MdNotifications className="w-6 h-6 mr-2" />
+                            Deployed Orders
                         </Link>
                     </li>
                 </ul>

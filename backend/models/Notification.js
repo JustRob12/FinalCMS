@@ -1,12 +1,17 @@
 const mongoose = require('mongoose');
 
 const notificationSchema = new mongoose.Schema({
-  orderCode: { type: String, required: true },
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  totalPrice: { type: Number, required: true },
-  timer: { type: Date, required: true },
-}, {
-  timestamps: true,
+  orderCode: String,
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  totalPrice: Number,
+  items: [
+    {
+      foodName: String,
+      quantity: Number,
+    },
+  ],
+  timer: Date,
+  createdAt: { type: Date, default: Date.now }
 });
 
 module.exports = mongoose.model('Notification', notificationSchema);

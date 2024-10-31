@@ -3,6 +3,7 @@ import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import AddFood from './components/Admin/AddFood';
 import AdminDashboard from './components/Admin/AdminDashboard';
 import AdminLayout from './components/Admin/AdminLayout';
+import DeployedOrders from './components/Admin/DeployedOrders';
 import ManageAccounts from './components/Admin/ManageAccounts';
 import Orders from './components/Admin/Orders';
 import Reports from './components/Admin/Reports';
@@ -76,6 +77,13 @@ const App = () => {
           path="/manage-accounts"
           element={renderAdminLayout(<ManageAccounts />)}
         />
+          <Route
+          path="/deployed-orders"
+          element={renderAdminLayout(<DeployedOrders/>)}
+        />
+        
+
+        
         {/* New routes for user components */}
         <Route
           path="/menu"
