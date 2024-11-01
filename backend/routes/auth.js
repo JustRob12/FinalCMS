@@ -137,5 +137,14 @@ router.patch('/accounts/access/:id', async (req, res) => {
     }
 });
 
+// Get all accounts
+router.get('/accounts', async (req, res) => {
+    try {
+        const users = await User.find({});
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 module.exports = router;

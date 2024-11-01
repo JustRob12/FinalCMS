@@ -35,16 +35,21 @@ router.get('/', verifyToken, async (req, res) => {
   console.log("Fetching all histories for admin"); // Log for debugging
 
   try {
-    const history = await History.find().sort({ date: -1 }); // Sort by date
+    const history = await History.find()
+      .populate('userId') // Assuming userId references the User model
+      .sort({ date: -1 });
 
-    // Map through the history to include formatted date
+    // Map through the history to include formatted date and user details
     const formattedHistory = history.map(entry => ({
       _id: entry._id,
       orderCode: entry.orderCode,
       totalPrice: entry.totalPrice,
-      createdAt: entry.date, // Use the date field from the model
-      formattedDate: entry.date ? new Date(entry.date).toLocaleString() : null, // Format the date
+      createdAt: entry.date,
+      formattedDate: entry.date ? new Date(entry.date).toLocaleString() : null,
       items: entry.items,
+      userName: entry.userId.name, // Adjust according to your user model
+      userCourse: entry.userId.course,
+      userYear: entry.userId.year,
     }));
 
     res.json(formattedHistory);
