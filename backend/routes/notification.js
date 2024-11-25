@@ -49,9 +49,24 @@ router.get('/', verifyToken, async (req, res) => {
 router.get('/all', verifyToken, async (req, res) => {
   try {
     const notifications = await Notification.find()
-      .populate('userId', 'name') // Populate the 'name' field from the 'User' model
-      .sort({ createdAt: -1 }); // Sort by createdAt
-    res.status(200).json(notifications);
+      .populate('userId', 'name course year') // Add course and year to populated fields
+      .sort({ createdAt: -1 });
+
+    // Transform the data to include user details
+    const formattedNotifications = notifications.map(notification => ({
+      _id: notification._id,
+      orderCode: notification.orderCode,
+      totalPrice: notification.totalPrice,
+      items: notification.items,
+      timer: notification.timer,
+      timeLeft: notification.timer - Date.now(), // Calculate time left
+      userId: notification.userId,
+      course: notification.userId?.course || 'N/A',
+      year: notification.userId?.year || 'N/A',
+      name: notification.userId?.name || 'N/A'
+    }));
+
+    res.status(200).json(formattedNotifications);
   } catch (err) {
     console.error("Error fetching all notifications:", err);
     res.status(500).json({ message: 'Failed to fetch notifications.', error: err.message });

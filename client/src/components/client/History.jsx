@@ -13,14 +13,19 @@ const History = () => {
         const token = localStorage.getItem("token");
         if (!token) throw new Error("No authentication token found.");
 
-        const response = await axios.get(`${backendUrl}/history`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await axios.get(
+          `${backendUrl}/history/user`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
 
         setHistory(response.data);
       } catch (err) {
         console.error("Error fetching history:", err);
-        setError("Failed to load history. Please try again later.");
+        setError(
+          err.response?.data?.message || "Failed to load history. Please try again later."
+        );
       } finally {
         setLoading(false);
       }

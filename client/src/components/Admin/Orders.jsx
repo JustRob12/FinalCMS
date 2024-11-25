@@ -1,68 +1,60 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
+import { FaSpinner, FaCheck, FaExclamationCircle } from "react-icons/fa";
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [updated, setUpdated] = useState(false); // State to trigger a re-fetch
-  const [loadingButton, setLoadingButton] = useState(false);
-  
-  const backendUrl = import.meta.env.VITE_BACKEND_URL; // Accessing VITE_BACKEND_URL
+  const [processingOrders, setProcessingOrders] = useState(new Set());
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-  // Fetch all orders from the backend
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const token = localStorage.getItem("token");
-
-        if (!token) throw new Error("No authentication token found.");
-
-        const response = await axios.get(`${backendUrl}/orders`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        setOrders(response.data);
-        setLoading(false);
-      } catch (err) {
-        console.error("Error fetching orders:", err);
-        setError("Failed to load orders.");
-        setLoading(false);
-      }
-    };
-
     fetchOrders();
-  }, [backendUrl, updated]); // Add 'updated' to trigger re-fetch
+    // Set up polling every 30 seconds
+    const intervalId = setInterval(fetchOrders, 30000);
+    return () => clearInterval(intervalId);
+  }, []);
 
-  const handleOrderReady = async (order) => {
-    if (loadingButton) return; // Prevent further execution if already processing
-    setLoadingButton(true); // Set loading state
-  
+  const fetchOrders = async () => {
     try {
       const token = localStorage.getItem("token");
-  
       if (!token) throw new Error("No authentication token found.");
-  
-      // Step 1: Decrement quantities for each food item
-      for (const item of order.items) {
-        if (item.foodId?._id) {
-          try {
-            await axios.patch(
-              `${backendUrl}/food/${item.foodId._id}/decrement-quantity`,
-              { quantity: item.quantity },
-              {
-                headers: { Authorization: `Bearer ${token}` }
-              }
-            );
-          } catch (error) {
-            console.error(`Failed to decrement quantity for item ${item.foodId.name}:`, error);
-            throw new Error(`Failed to update quantity for ${item.foodId.name}`);
-          }
-        }
-      }
 
+      const response = await axios.get(`${backendUrl}/orders`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setOrders(response.data);
+    } catch (err) {
+      console.error("Error fetching orders:", err);
+      setError("Failed to load orders.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOrderReady = async (order) => {
+    if (processingOrders.has(order._id)) return;
+    
+    setProcessingOrders(prev => new Set([...prev, order._id]));
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("No authentication token found.");
+
+      // Step 1: Decrement quantities
+      await Promise.all(order.items.map(async (item) => {
+        if (item.foodId?._id) {
+          await axios.patch(
+            `${backendUrl}/food/${item.foodId._id}/decrement-quantity`,
+            { quantity: item.quantity },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        }
+      }));
+
+      // Step 2: Create notification
       const notificationData = {
         orderCode: order.orderCode,
         userId: order.userId._id,
@@ -71,86 +63,142 @@ const Orders = () => {
           foodName: item.foodId?.name,
           quantity: item.quantity,
         })),
-        createdAt: order.createdAt,
       };
-  
-      // Step 2: Send notification
+
       await axios.post(
         `${backendUrl}/notifications`,
         notificationData,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-  
-      // Step 3: Delete the order
+
+      // Step 3: Delete order
       await axios.delete(`${backendUrl}/orders/${order._id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-  
-      alert("Order marked as ready and deleted!");
-      setUpdated(!updated); // Trigger re-fetch
+
+      // Step 4: Update local state
+      setOrders(prevOrders => prevOrders.filter(o => o._id !== order._id));
+
     } catch (err) {
-      console.error("Error marking order as ready:", err);
-      alert(err.message || "Failed to mark order as ready.");
+      console.error("Error processing order:", err);
+      alert("Failed to process order. Please try again.");
     } finally {
-      setLoadingButton(false); // Reset loading state
+      setProcessingOrders(prev => {
+        const next = new Set(prev);
+        next.delete(order._id);
+        return next;
+      });
     }
   };
 
-  if (loading) return <p className="text-center mt-10">Loading...</p>;
-  if (error) return <p className="text-center text-red-500 mt-10">{error}</p>;
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <FaSpinner className="animate-spin text-4xl text-blue-500" />
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold text-center mb-6">Orders</h1>
+    <div className="p-6 bg-gray-50 min-h-screen">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-800">Active Orders</h1>
+          <div className="text-sm text-gray-600">
+            Total Orders: {orders.length}
+          </div>
+        </div>
 
-      <div className="overflow-x-auto">
-        <table className="table-auto w-full border-collapse border border-gray-300">
-          <thead>
-            <tr className="bg-gray-200 text-left">
-              <th className="border px-4 py-2">Order Code</th>
-              <th className="border px-4 py-2">User ID</th>
-              <th className="border px-4 py-2">Total Price</th>
-              <th className="border px-4 py-2">Items</th>
-              <th className="border px-4 py-2">Course</th>
-              <th className="border px-4 py-2">Year</th>
-              <th className="border px-4 py-2">Date</th>
-              <th className="border px-4 py-2">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((order) => (
-              <tr key={order._id} className="hover:bg-gray-100">
-                <td className="border px-4 py-2">{order.orderCode}</td>
-                <td className="border px-4 py-2">{order.userId?.name}</td>
-                <td className="border px-4 py-2">₱{order.totalPrice.toFixed(2)}</td>
-                <td className="border px-4 py-2">
-                  <ul className="list-disc list-inside">
+        {error && (
+          <div className="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+            <FaExclamationCircle className="inline mr-2" />
+            {error}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {orders.map((order) => (
+            <div
+              key={order._id}
+              className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+            >
+              <div className="p-4 border-b">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-semibold text-gray-600">
+                    Order Code:
+                  </span>
+                  <span className="text-sm font-bold text-blue-600">
+                    {order.orderCode}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Total:</span>
+                  <span className="text-lg font-bold text-green-600">
+                    ₱{order.totalPrice.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-4 bg-gray-50">
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-2">
+                    Customer Details
+                  </h3>
+                  <p className="text-sm">{order.userId?.name}</p>
+                  <p className="text-sm text-gray-600">
+                    {order.userId?.course} - Year {order.userId?.year}
+                  </p>
+                </div>
+
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-2">
+                    Order Items
+                  </h3>
+                  <ul className="space-y-1">
                     {order.items.map((item, index) => (
-                      <li key={index}>
-                        {item.foodId?.name} - {item.quantity}
+                      <li key={index} className="text-sm flex justify-between">
+                        <span>{item.foodId?.name}</span>
+                        <span className="text-gray-600">x{item.quantity}</span>
                       </li>
                     ))}
                   </ul>
-                </td>
-                <td className="border px-4 py-2">{order.userId?.course}</td>
-                <td className="border px-4 py-2">{order.userId?.year}</td>
-                <td className="border px-4 py-2">
-                  {new Date(order.createdAt).toLocaleString()}
-                </td>
-                <td className="border px-4 py-2">
-                  <button
-                    onClick={() => handleOrderReady(order)}
-                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                  >
-                    Order is Ready
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+
+                <div className="text-xs text-gray-500 mb-4">
+                  Ordered at: {new Date(order.createdAt).toLocaleString()}
+                </div>
+
+                <button
+                  onClick={() => handleOrderReady(order)}
+                  disabled={processingOrders.has(order._id)}
+                  className={`w-full py-2 px-4 rounded-md flex items-center justify-center gap-2 ${
+                    processingOrders.has(order._id)
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-blue-500 hover:bg-blue-600'
+                  } text-white transition-colors`}
+                >
+                  {processingOrders.has(order._id) ? (
+                    <>
+                      <FaSpinner className="animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <FaCheck />
+                      Order is Ready
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {orders.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-500 text-lg">No active orders</p>
+          </div>
+        )}
       </div>
     </div>
   );

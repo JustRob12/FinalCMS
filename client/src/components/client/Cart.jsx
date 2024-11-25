@@ -1,5 +1,7 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
+import { Link } from 'react-router-dom';
+import { FaShoppingCart, FaArrowRight } from 'react-icons/fa';
 
 const Cart = () => {
   const [cart, setCart] = useState(null);
@@ -136,9 +138,69 @@ const Cart = () => {
     }
   };
 
-  if (loading) return <p>Loading your cart...</p>;
-  if (error) return <p>{error}</p>;
-  if (!cart || cart.foodItems.length === 0) return <p>Your cart is empty.</p>;
+  // Empty cart component
+  const EmptyCart = () => (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+      <div className="w-64 h-64 mb-8 relative">
+        {/* Shopping cart illustration */}
+        <div className="absolute inset-0 bg-indigo-100 rounded-full opacity-50"></div>
+        <FaShoppingCart className="w-32 h-32 text-indigo-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+      </div>
+      
+      <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">
+        Your Cart is Empty
+      </h2>
+      
+      <p className="text-gray-600 text-center mb-8 max-w-md">
+        Looks like you haven't added anything to your cart yet. 
+        Browse our delicious menu and find something you'll love!
+      </p>
+      
+      <Link 
+        to="/menu" 
+        className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-full 
+                 hover:bg-indigo-700 transition-colors duration-300 shadow-lg hover:shadow-xl"
+      >
+        <span>Browse Menu</span>
+        <FaArrowRight className="w-4 h-4" />
+      </Link>
+
+      {/* Additional suggestions */}
+      <div className="mt-12 text-center">
+        <h3 className="text-lg font-semibold text-gray-700 mb-4">
+          Quick Suggestions
+        </h3>
+        <div className="flex flex-wrap justify-center gap-4">
+          <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors">
+            Popular Items
+          </button>
+          <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors">
+            Today's Special
+          </button>
+          <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors">
+            Best Sellers
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (loading) return (
+    <div className="flex justify-center items-center min-h-[60vh]">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+    </div>
+  );
+  
+  if (error) return (
+    <div className="flex justify-center items-center min-h-[60vh]">
+      <div className="text-red-500 text-center">
+        <p className="text-xl font-semibold mb-2">Oops! Your Cart is Empty</p>
+       
+      </div>
+    </div>
+  );
+  
+  if (!cart || cart.foodItems.length === 0) return <EmptyCart />;
 
   return (
     <div className="container mx-auto px-4 py-8">

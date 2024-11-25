@@ -127,64 +127,92 @@ const DeployedOrders = () => {
 
   return (
     <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold text-center mb-6">All Notifications</h1>
+      <h1 className="text-3xl font-bold text-center mb-6">Deployed Orders</h1>
 
-      <div className="mb-4 text-center">
+      <div className="mb-4 flex justify-between items-center">
         <input
           type="text"
           placeholder="Search by Order Code"
-          className="px-4 py-2 border rounded-md"
+          className="px-4 py-2 border rounded-md w-64"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
+        <div className="text-sm text-gray-600">
+          Total Orders: {filteredNotifications.length}
+        </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="table-auto w-full border-collapse border border-gray-300">
-          <thead>
-            <tr className="bg-gray-200 text-left">
-              <th className="border px-4 py-2">Order Code</th>
-              <th className="border px-4 py-2">Name</th>
-              <th className="border px-4 py-2">Total Price</th>
-              <th className="border px-4 py-2">Items</th>
-              <th className="border px-4 py-2">Course</th> {/* Added Course column */}
-              <th className="border px-4 py-2">Year</th> {/* Added Year column */}
-              <th className="border px-4 py-2">Timer</th>
-              <th className="border px-4 py-2">Actions</th>
+      <div className="overflow-x-auto bg-white rounded-lg shadow">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Order Code
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Customer Details
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Order Items
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Timer
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="bg-white divide-y divide-gray-200">
             {filteredNotifications.map((notification) => (
-              <tr key={notification._id} className="hover:bg-gray-100">
-                <td className="border px-4 py-2">{notification.orderCode}</td>
-                <td className="border px-4 py-2">{notification.userId?.name || "N/A"}</td>
-                <td className="border px-4 py-2">₱{notification.totalPrice.toFixed(2)}</td>
-                <td className="border px-4 py-2">
-                  <ul className="list-disc list-inside">
+              <tr key={notification._id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">
+                    {notification.orderCode}
+                  </div>
+                  <div className="text-sm text-green-600">
+                    ₱{notification.totalPrice.toFixed(2)}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">{notification.userId?.name}</div>
+                  <div className="text-sm text-gray-500">
+                    {notification.userId?.course} - Year {notification.userId?.year}
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <ul className="text-sm text-gray-500 space-y-1">
                     {notification.items.map((item, index) => (
-                      <li key={index}>
-                        {item.foodName} - Quantity: {item.quantity}
+                      <li key={index} className="flex justify-between">
+                        <span>{item.foodName}</span>
+                        <span className="text-gray-400 ml-2">x{item.quantity}</span>
                       </li>
                     ))}
                   </ul>
                 </td>
-                <td className="border px-4 py-2">{notification.course || "N/A"}</td> {/* Display Course */}
-                <td className="border px-4 py-2">{notification.year || "N/A"}</td> {/* Display Year */}
-                <td className="border px-4 py-2">
-                  {notification.timeLeft > 0 ? formatTime(notification.timeLeft) : "Expired"}
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`px-2 py-1 text-sm rounded-full ${
+                    notification.timeLeft > 300000 // 5 minutes in milliseconds
+                      ? 'bg-green-100 text-green-800'
+                      : notification.timeLeft > 0
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {notification.timeLeft > 0 ? formatTime(notification.timeLeft) : "Expired"}
+                  </span>
                 </td>
-                <td className="border px-4 py-2">
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
                   {notification.timeLeft > 0 ? (
                     <button
                       onClick={() => activateOrder(notification._id)}
-                      className="text-green-500 hover:underline mr-2"
+                      className="text-white bg-green-500 hover:bg-green-600 px-3 py-1 rounded-md transition-colors"
                     >
                       Activate
                     </button>
                   ) : (
                     <button
                       onClick={() => handleDelete(notification._id)}
-                      className="text-red-500 hover:underline"
+                      className="text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded-md transition-colors"
                     >
                       Delete
                     </button>

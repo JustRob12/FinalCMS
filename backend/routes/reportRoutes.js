@@ -13,145 +13,92 @@ const {
   endOfWeek,
   startOfMonth,
   endOfMonth,
+  startOfYear,
   format 
 } = require('date-fns');
 
 // Get comprehensive report
 router.get('/comprehensive', verifyToken, async (req, res) => {
   try {
+    const { range = 'today' } = req.query;
     const today = new Date();
-    const startOfToday = startOfDay(today);
     const endOfToday = endOfDay(today);
-    const startOfThisWeek = startOfWeek(today);
-    const startOfThisMonth = startOfMonth(today);
+    let startDate;
 
-    // Get all required data
-    const [
-      // Orders Statistics
-      totalOrders,
-      todayOrders,
-      weeklyOrders,
-      monthlyOrders,
-      
-      // Revenue Statistics
-      totalRevenue,
-      todayRevenue,
-      weeklyRevenue,
-      monthlyRevenue,
+    switch (range) {
+      case 'today':
+        startDate = startOfDay(today);
+        break;
+      case 'week':
+        startDate = startOfWeek(today);
+        break;
+      case 'month':
+        startDate = startOfMonth(today);
+        break;
+      case 'year':
+        startDate = startOfYear(today);
+        break;
+      default:
+        startDate = startOfDay(today);
+    }
 
-      // User Statistics
-      totalUsers,
-      usersByYear,
-      usersByCourse,
+    // Get filtered history based on date range
+    const filteredHistory = await History.find({
+      date: { 
+        $gte: startDate, 
+        $lte: endOfToday 
+      }
+    });
 
-      // Food Statistics
-      topSellingItems,
-      foodInventory,
+    // Calculate totals for the filtered period
+    const totalRevenue = filteredHistory.reduce((sum, entry) => sum + (entry.totalPrice || 0), 0);
+    const totalOrders = filteredHistory.length;
 
-      // Recent Activity
-      recentOrders,
-      recentHistory
+    // Get recent activity
+    const recentHistory = await History.find()
+      .sort({ date: -1 })
+      .limit(10)
+      .populate('userId', 'name course year');
 
-    ] = await Promise.all([
-      // Orders counts
-      Order.countDocuments(),
-      Order.countDocuments({ createdAt: { $gte: startOfToday, $lte: endOfToday } }),
-      Order.countDocuments({ createdAt: { $gte: startOfThisWeek, $lte: today } }),
-      Order.countDocuments({ createdAt: { $gte: startOfThisMonth, $lte: today } }),
-
-      // Revenue calculations
-      Order.aggregate([{ $group: { _id: null, total: { $sum: '$totalPrice' } } }]),
-      Order.aggregate([
-        { $match: { createdAt: { $gte: startOfToday, $lte: endOfToday } } },
-        { $group: { _id: null, total: { $sum: '$totalPrice' } } }
-      ]),
-      Order.aggregate([
-        { $match: { createdAt: { $gte: startOfThisWeek, $lte: today } } },
-        { $group: { _id: null, total: { $sum: '$totalPrice' } } }
-      ]),
-      Order.aggregate([
-        { $match: { createdAt: { $gte: startOfThisMonth, $lte: today } } },
-        { $group: { _id: null, total: { $sum: '$totalPrice' } } }
-      ]),
-
-      // User analytics
-      User.countDocuments({ role: 'user' }),
-      User.aggregate([
-        { $match: { role: 'user' } },
-        { $group: { _id: '$year', count: { $sum: 1 } } },
-        { $sort: { _id: 1 } }
-      ]),
-      User.aggregate([
-        { $match: { role: 'user' } },
-        { $group: { _id: '$course', count: { $sum: 1 } } },
-        { $sort: { _id: 1 } }
-      ]),
-
-      // Food analytics
-      Order.aggregate([
-        { $unwind: '$items' },
-        { 
-          $group: {
-            _id: '$items.foodId',
-            totalQuantity: { $sum: '$items.quantity' },
-            totalRevenue: { $sum: { $multiply: ['$items.quantity', '$items.price'] } }
-          }
-        },
-        { $sort: { totalQuantity: -1 } },
-        { $limit: 10 }
-      ]),
-      Food.find().select('name quantity price available'),
-
-      // Recent activity
-      Order.find()
-        .sort({ createdAt: -1 })
-        .limit(10)
-        .populate('userId', 'name course year'),
-      History.find()
-        .sort({ date: -1 })
-        .limit(10)
-        .populate('userId', 'name course year')
-    ]);
+    // Add low stock query
+    const lowStockItems = await Food.find({
+      quantity: { $lte: 20 } // Assuming items with 20 or fewer units are considered low stock
+    }).select('name quantity price category');
 
     // Format the response
     res.json({
-      orderMetrics: {
+      historyMetrics: {
         total: totalOrders,
-        today: todayOrders,
-        thisWeek: weeklyOrders,
-        thisMonth: monthlyOrders
+        today: range === 'today' ? totalOrders : 0,
+        thisWeek: range === 'week' ? totalOrders : 0,
+        thisMonth: range === 'month' ? totalOrders : 0,
+        thisYear: range === 'year' ? totalOrders : 0
       },
       revenueMetrics: {
-        total: totalRevenue[0]?.total || 0,
-        today: todayRevenue[0]?.total || 0,
-        thisWeek: weeklyRevenue[0]?.total || 0,
-        thisMonth: monthlyRevenue[0]?.total || 0,
-        averageOrderValue: (totalRevenue[0]?.total || 0) / totalOrders || 0
-      },
-      userMetrics: {
-        total: totalUsers,
-        byYear: usersByYear,
-        byCourse: usersByCourse
-      },
-      foodMetrics: {
-        topSelling: topSellingItems,
-        inventory: foodInventory,
-        lowStock: foodInventory.filter(item => item.quantity < 10)
+        total: totalRevenue,
+        today: range === 'today' ? totalRevenue : 0,
+        thisWeek: range === 'week' ? totalRevenue : 0,
+        thisMonth: range === 'month' ? totalRevenue : 0,
+        thisYear: range === 'year' ? totalRevenue : 0,
+        averageOrderValue: totalOrders > 0 ? totalRevenue / totalOrders : 0
       },
       recentActivity: {
-        orders: recentOrders.map(order => ({
-          orderCode: order.orderCode,
-          customerName: order.userId?.name || 'Unknown',
-          course: order.userId?.course,
-          year: order.userId?.year,
-          total: order.totalPrice,
-          date: format(new Date(order.createdAt), 'yyyy-MM-dd HH:mm')
-        })),
         history: recentHistory.map(entry => ({
           orderCode: entry.orderCode,
           customerName: entry.userId?.name || 'Unknown',
+          course: entry.userId?.course,
+          year: entry.userId?.year,
           total: entry.totalPrice,
+          items: entry.items,
           date: format(new Date(entry.date), 'yyyy-MM-dd HH:mm')
+        }))
+      },
+      lowStock: {
+        items: lowStockItems.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          category: item.category
         }))
       }
     });

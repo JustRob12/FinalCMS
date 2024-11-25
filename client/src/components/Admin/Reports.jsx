@@ -30,13 +30,73 @@ ChartJS.register(
 );
 
 const Reports = () => {
-  const [reportData, setReportData] = useState(null);
+  const [reportData, setReportData] = useState({
+    revenueMetrics: {
+      total: 0,
+      today: 0,
+      thisWeek: 0,
+      thisMonth: 0,
+      averageOrderValue: 0
+    },
+    historyMetrics: {
+      total: 0,
+      today: 0,
+      thisWeek: 0,
+      thisMonth: 0
+    },
+    recentActivity: {
+      history: []
+    },
+    lowStock: {
+      items: []
+    }
+  });
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState('week'); // week, month, year
+  const [error, setError] = useState(null);
+  const [dateRange, setDateRange] = useState('today');
 
-  useEffect(() => {
-    fetchComprehensiveReport();
-  }, [dateRange]);
+  // Add these new chart configurations
+  const revenueChartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top',
+      },
+      title: {
+        display: true,
+        text: 'Revenue Trends'
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: (value) => `₱${value}`
+        }
+      }
+    }
+  };
+
+  const ordersChartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top',
+      },
+      title: {
+        display: true,
+        text: 'Order Trends'
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          stepSize: 1
+        }
+      }
+    }
+  };
 
   const fetchComprehensiveReport = async () => {
     try {
@@ -49,12 +109,17 @@ const Reports = () => {
         }
       );
       setReportData(response.data);
-      setLoading(false);
     } catch (error) {
       console.error('Error fetching report:', error);
+      setError('Failed to load report data');
+    } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchComprehensiveReport();
+  }, [dateRange]);
 
   const exportToExcel = () => {
     if (!reportData) return;
@@ -137,10 +202,86 @@ const Reports = () => {
     doc.save(`Sales_Report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
   };
 
+  // Add this section after the Summary Cards and before the Recent History Table
+  const renderCharts = () => {
+    if (!reportData?.recentActivity?.history) return null;
+
+    // Group data by date
+    const groupedData = reportData.recentActivity.history.reduce((acc, entry) => {
+      const date = entry.date.split(' ')[0]; // Get only the date part
+      if (!acc[date]) {
+        acc[date] = {
+          revenue: 0,
+          orders: 0
+        };
+      }
+      acc[date].revenue += entry.total;
+      acc[date].orders += 1;
+      return acc;
+    }, {});
+
+    // Prepare data for charts
+    const dates = Object.keys(groupedData).sort();
+    const revenues = dates.map(date => groupedData[date].revenue);
+    const orders = dates.map(date => groupedData[date].orders);
+
+    const chartData = {
+      labels: dates,
+      datasets: [
+        {
+          label: 'Revenue',
+          data: revenues,
+          borderColor: 'rgb(75, 192, 192)',
+          backgroundColor: 'rgba(75, 192, 192, 0.5)',
+          yAxisID: 'y'
+        }
+      ]
+    };
+
+    const orderChartData = {
+      labels: dates,
+      datasets: [
+        {
+          label: 'Number of Orders',
+          data: orders,
+          backgroundColor: 'rgba(53, 162, 235, 0.5)',
+          borderColor: 'rgb(53, 162, 235)',
+          borderWidth: 1
+        }
+      ]
+    };
+
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Revenue Line Chart */}
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">Revenue Trends</h2>
+          <Line data={chartData} options={revenueChartOptions} />
+        </div>
+
+        {/* Orders Bar Chart */}
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">Order Trends</h2>
+          <Bar data={orderChartData} options={ordersChartOptions} />
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-red-500 text-center">
+          <p className="text-xl">{error}</p>
+        </div>
       </div>
     );
   }
@@ -148,7 +289,7 @@ const Reports = () => {
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       <div className="mb-8 flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Sales Reports</h1>
+        <h1 className="text-3xl font-bold">History Reports</h1>
         <div className="flex gap-4">
           <button
             onClick={exportToExcel}
@@ -165,24 +306,38 @@ const Reports = () => {
         </div>
       </div>
 
-      {/* Date Range Selector */}
+      {/* Updated Date Range Selector */}
       <div className="mb-8 bg-white p-4 rounded-lg shadow">
         <div className="flex gap-4">
           <button
+            onClick={() => setDateRange('today')}
+            className={`px-4 py-2 rounded-lg ${
+              dateRange === 'today' ? 'bg-blue-500 text-white' : 'bg-gray-200'
+            }`}
+          >
+            Today
+          </button>
+          <button
             onClick={() => setDateRange('week')}
-            className={`px-4 py-2 rounded-lg ${dateRange === 'week' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+            className={`px-4 py-2 rounded-lg ${
+              dateRange === 'week' ? 'bg-blue-500 text-white' : 'bg-gray-200'
+            }`}
           >
             This Week
           </button>
           <button
             onClick={() => setDateRange('month')}
-            className={`px-4 py-2 rounded-lg ${dateRange === 'month' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+            className={`px-4 py-2 rounded-lg ${
+              dateRange === 'month' ? 'bg-blue-500 text-white' : 'bg-gray-200'
+            }`}
           >
             This Month
           </button>
           <button
             onClick={() => setDateRange('year')}
-            className={`px-4 py-2 rounded-lg ${dateRange === 'year' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+            className={`px-4 py-2 rounded-lg ${
+              dateRange === 'year' ? 'bg-blue-500 text-white' : 'bg-gray-200'
+            }`}
           >
             This Year
           </button>
@@ -193,65 +348,90 @@ const Reports = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-lg font-semibold mb-2">Total Revenue</h3>
-          <p className="text-3xl font-bold text-green-600">₱{reportData.revenueMetrics.total.toFixed(2)}</p>
+          <p className="text-3xl font-bold text-green-600">
+            ₱{(reportData?.revenueMetrics?.total || 0).toFixed(2)}
+          </p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-lg font-semibold mb-2">Total Orders</h3>
-          <p className="text-3xl font-bold text-blue-600">{reportData.orderMetrics.total}</p>
+          <p className="text-3xl font-bold text-blue-600">
+            {reportData?.historyMetrics?.total || 0}
+          </p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-lg font-semibold mb-2">Average Order Value</h3>
           <p className="text-3xl font-bold text-purple-600">
-            ₱{reportData.revenueMetrics.averageOrderValue.toFixed(2)}
+            ₱{(reportData?.revenueMetrics?.averageOrderValue || 0).toFixed(2)}
           </p>
         </div>
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Revenue Chart */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Revenue Trend</h2>
-          <Line
-            data={{
-              labels: ['Today', 'This Week', 'This Month'],
-              datasets: [{
-                label: 'Revenue (₱)',
-                data: [
-                  reportData.revenueMetrics.today,
-                  reportData.revenueMetrics.thisWeek,
-                  reportData.revenueMetrics.thisMonth
-                ],
-                borderColor: 'rgb(75, 192, 192)',
-                tension: 0.1
-              }]
-            }}
-          />
-        </div>
+      {/* Charts Section */}
+      {renderCharts()}
 
-        {/* Orders Chart */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Orders Trend</h2>
-          <Bar
-            data={{
-              labels: ['Today', 'This Week', 'This Month'],
-              datasets: [{
-                label: 'Number of Orders',
-                data: [
-                  reportData.orderMetrics.today,
-                  reportData.orderMetrics.thisWeek,
-                  reportData.orderMetrics.thisMonth
-                ],
-                backgroundColor: 'rgba(53, 162, 235, 0.5)'
-              }]
-            }}
-          />
+      {/* Low Stock Section */}
+      <div className="bg-white p-6 rounded-lg shadow mb-8">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Low Stock Items</h2>
+          <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm">
+            {reportData?.lowStock?.items?.length || 0} items
+          </span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Item Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Category
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Quantity Left
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Price
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {reportData?.lowStock?.items?.map((item, index) => (
+                <tr key={index}>
+                  <td className="px-6 py-4 whitespace-nowrap">{item?.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{item?.category}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`${
+                      item?.quantity <= 10 ? 'text-red-600' : 'text-yellow-600'
+                    } font-medium`}>
+                      {item?.quantity}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    ₱{(item?.price || 0).toFixed(2)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      item?.quantity <= 10 
+                        ? 'bg-red-100 text-red-800' 
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {item?.quantity <= 10 ? 'Critical' : 'Low Stock'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* Recent Orders Table */}
+      {/* Recent History Table */}
       <div className="bg-white p-6 rounded-lg shadow mb-8">
-        <h2 className="text-xl font-semibold mb-4">Recent Orders</h2>
+        <h2 className="text-xl font-semibold mb-4">Recent History</h2>
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead className="bg-gray-50">
@@ -263,7 +443,16 @@ const Reports = () => {
                   Customer
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Course
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Year
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Total
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Items
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Date
@@ -271,12 +460,23 @@ const Reports = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {reportData.recentActivity.orders.map((order, index) => (
+              {reportData?.recentActivity?.history?.map((entry, index) => (
                 <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap">{order.orderCode}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{order.customerName}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">₱{order.total.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{order.date}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{entry?.orderCode}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{entry?.customerName}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{entry?.course}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{entry?.year}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">₱{(entry?.total || 0).toFixed(2)}</td>
+                  <td className="px-6 py-4">
+                    <ul className="list-disc list-inside">
+                      {entry?.items?.map((item, idx) => (
+                        <li key={idx}>
+                          {item?.foodName} x {item?.quantity}
+                        </li>
+                      ))}
+                    </ul>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">{entry?.date}</td>
                 </tr>
               ))}
             </tbody>
