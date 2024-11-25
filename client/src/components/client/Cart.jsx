@@ -7,6 +7,9 @@ const Cart = () => {
   const [error, setError] = useState(null);
 
   const token = localStorage.getItem("token"); // Retrieve the user token
+  const course = localStorage.getItem("course"); // Retrieve the course
+  const year = localStorage.getItem("year"); // Retrieve the year
+  const userId = localStorage.getItem("userId"); // Retrieve the user ID
 
   useEffect(() => {
     const fetchCart = async () => {
@@ -65,7 +68,6 @@ const Cart = () => {
         }
       );
 
-      // Update the cart state with new quantity
       setCart((prevCart) => {
         const updatedItems = prevCart.foodItems.map((item) =>
           item.foodId._id === foodId ? { ...item, quantity: response.data.newQuantity } : item
@@ -90,7 +92,6 @@ const Cart = () => {
         }
       );
 
-      // Update the cart state with new quantity
       setCart((prevCart) => {
         const updatedItems = prevCart.foodItems.map((item) =>
           item.foodId._id === foodId ? { ...item, quantity: response.data.newQuantity } : item
@@ -105,32 +106,35 @@ const Cart = () => {
 
   const handlePlaceOrder = async () => {
     try {
-      // Step 1: Place the order
       const response = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/orders`,
-        { cartItems: cart.foodItems },
-        { headers: {
-          Authorization: `Bearer ${token}`,
-        }, }
+        { 
+          cartItems: cart.foodItems,
+          course,
+          year,
+          userId 
+        },
+        { 
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
-  
+
       alert(`Order placed successfully! Your order code is: ${response.data.order.orderCode}`);
-      
-      // Step 2: Clear the cart
+
       await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/cart`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-  
+
       setCart(null); // Clear the cart state
-  
     } catch (error) {
-      console.error('Error placing order:', error);
-      alert('Failed to place order.');
+      console.error("Error placing order:", error);
+      alert("Failed to place order.");
     }
   };
-  
 
   if (loading) return <p>Loading your cart...</p>;
   if (error) return <p>{error}</p>;

@@ -2,6 +2,7 @@ const express = require('express');
 const verifyToken = require('../middleware/auth');
 const Order = require('../models/Order');
 const User = require('../models/User'); // Import the User model
+const Notification = require('../models/Notification'); // Ensure you have a Notification model
 const router = express.Router();
 
 // Random code generator function
@@ -14,10 +15,18 @@ const generateRandomCode = () => {
   return code;
 };
 
+// Place an order
 router.post('/', verifyToken, async (req, res) => {
   const { cartItems } = req.body;
 
   try {
+    // Get user details
+    const user = await User.findById(req.user.id).select('course year'); // Get course and year info
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
     // Calculate total price
     const totalPrice = cartItems.reduce(
       (total, item) => total + item.foodId.price * item.quantity,
@@ -27,34 +36,47 @@ router.post('/', verifyToken, async (req, res) => {
     // Generate the random order code
     const orderCode = generateRandomCode();
 
-    // Ensure the code is included in the order creation
+    // Create a new order with user information
     const newOrder = new Order({
       userId: req.user.id,
       items: cartItems,
       totalPrice,
-      orderCode, // Make sure the name matches the schema
+      orderCode,
+      course: user.course, // Include user's course
+      year: user.year, // Include user's year
     });
 
     await newOrder.save();
 
-    res.status(201).json({ message: 'Order placed successfully', order: newOrder });
+    // // Optionally, create a notification for this order
+    const newNotification = new Notification({
+      orderCode,
+      userId: req.user.id,
+      totalPrice,
+      message: 'Order placed successfully',
+    });
+
+    await newNotification.save();
+
+    res.status(201).json({
+      message: 'Order placed successfully',
+      order: newOrder,
+      notification: newNotification,
+    });
   } catch (error) {
     console.error('Error creating order:', error);
     res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }
 });
 
-
-
-// Get all orders route
-router.get('/', async (req, res) => {
+// Get all orders
+router.get('/', verifyToken, async (req, res) => {
   try {
-    // Fetch all orders and populate user info
     const orders = await Order.find()
       .populate('items.foodId') // Populate food items
-      .populate({ 
+      .populate({
         path: 'userId', // Populate user details using the userId
-        select: 'name'  // Only select the name field
+        select: 'name course year', // Include name, course, and year
       });
 
     res.status(200).json(orders);
@@ -64,27 +86,29 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/', verifyToken, async (req, res) => {
-    const { orderCode, userId, totalPrice } = req.body;
-  
-    try {
-      const newNotification = new Notification({
-        orderCode,
-        userId,
-        totalPrice,
-        // Include any other fields required
-      });
-  
-      await newNotification.save();
-  
-      res.status(201).json({ message: 'Notification created successfully', notification: newNotification });
-    } catch (error) {
-      console.error('Error creating notification:', error);
-      res.status(500).json({ message: 'Internal Server Error', error: error.message });
-    }
-  });
+// Create notification route
+router.post('/notification', verifyToken, async (req, res) => {
+  const { orderCode, userId, totalPrice } = req.body;
 
+  try {
+    const newNotification = new Notification({
+      orderCode,
+      userId,
+      totalPrice,
+      message: 'Order notification created',
+    });
 
+    await newNotification.save();
+
+    res.status(201).json({
+      message: 'Notification created successfully',
+      notification: newNotification,
+    });
+  } catch (error) {
+    console.error('Error creating notification:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+});
 
 // Delete order by ID
 router.delete('/:orderId', verifyToken, async (req, res) => {
@@ -103,8 +127,5 @@ router.delete('/:orderId', verifyToken, async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }
 });
-
-  
-  
 
 module.exports = router;

@@ -85,17 +85,17 @@ const DeployedOrders = () => {
   const activateOrder = async (id) => {
     const token = localStorage.getItem("token");
     const notification = notifications.find(n => n._id === id); // Get the notification details
-  
+
     if (!notification) {
       console.error("Notification not found:", id);
       return;
     }
-  
+
     const { userId, items, totalPrice } = notification; // Assuming these are part of your notification object
-    
+
     // Get the current date and time
     const activatedAt = new Date();
-  
+
     try {
       await axios.patch(`${backendUrl}/notifications/${id}/received`, { 
         userId, 
@@ -114,9 +114,6 @@ const DeployedOrders = () => {
       setError("Failed to activate order.");
     }
   };
-  
-  
-
 
   if (loading) return <p className="text-center mt-10">Loading...</p>;
   if (error) return <p className="text-center text-red-500 mt-10">{error}</p>;
@@ -150,6 +147,8 @@ const DeployedOrders = () => {
               <th className="border px-4 py-2">Name</th>
               <th className="border px-4 py-2">Total Price</th>
               <th className="border px-4 py-2">Items</th>
+              <th className="border px-4 py-2">Course</th> {/* Added Course column */}
+              <th className="border px-4 py-2">Year</th> {/* Added Year column */}
               <th className="border px-4 py-2">Timer</th>
               <th className="border px-4 py-2">Actions</th>
             </tr>
@@ -169,6 +168,8 @@ const DeployedOrders = () => {
                     ))}
                   </ul>
                 </td>
+                <td className="border px-4 py-2">{notification.course || "N/A"}</td> {/* Display Course */}
+                <td className="border px-4 py-2">{notification.year || "N/A"}</td> {/* Display Year */}
                 <td className="border px-4 py-2">
                   {notification.timeLeft > 0 ? formatTime(notification.timeLeft) : "Expired"}
                 </td>

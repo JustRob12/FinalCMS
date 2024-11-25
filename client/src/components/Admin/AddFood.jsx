@@ -1,5 +1,9 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
+import Swal from 'sweetalert2';
+import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { MdCancel } from 'react-icons/md';
+import { IoCheckmarkCircle, IoCloseCircle } from 'react-icons/io5';
 
 const AddFood = () => {
   const [foods, setFoods] = useState([]);
@@ -9,8 +13,9 @@ const AddFood = () => {
     price: "",
     quantity: "",
     category: "Meals",
-    image: null, // Store the uploaded file
+    image: null,
   });
+  const [currentImage, setCurrentImage] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -36,32 +41,186 @@ const AddFood = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const data = new FormData(); // Create a FormData object to handle file uploads
+    
+    const result = await Swal.fire({
+      title: editingId ? 'Update Food Item?' : 'Add New Food Item?',
+      text: editingId ? 'Are you sure you want to update this food item?' : 'Are you sure you want to add this food item?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: editingId ? 'Yes, update it!' : 'Yes, add it!'
+    });
 
-    // Append form data
-    for (const key in formData) {
-      data.append(key, formData[key]);
-    }
-
-    if (editingId) {
-      await axios.put(
-        `${import.meta.env.VITE_BACKEND_URL}/food/${editingId}`,
-        data,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+    if (result.isConfirmed) {
+      try {
+        const data = new FormData();
+        
+        if (formData.image || !editingId) {
+          data.append('image', formData.image);
         }
-      );
-      setEditingId(null);
-    } else {
-      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/food/add`, data, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+        
+        data.append('name', formData.name);
+        data.append('description', formData.description);
+        data.append('price', formData.price);
+        data.append('quantity', formData.quantity);
+        data.append('category', formData.category);
+
+        if (editingId) {
+          await axios.put(
+            `${import.meta.env.VITE_BACKEND_URL}/food/${editingId}`,
+            data,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
+          setEditingId(null);
+          setCurrentImage(null);
+        } else {
+          await axios.post(`${import.meta.env.VITE_BACKEND_URL}/food/add`, data, {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          });
+        }
+        
+        Swal.fire(
+          'Success!',
+          editingId ? 'Food item has been updated.' : 'Food item has been added.',
+          'success'
+        );
+
+        fetchFoods();
+        setFormData({
+          name: "",
+          description: "",
+          price: "",
+          quantity: "",
+          category: "Meals",
+          image: null,
+        });
+      } catch (error) {
+        Swal.fire(
+          'Error!',
+          'There was an error processing your request.',
+          'error'
+        );
+      }
     }
-    fetchFoods();
+  };
+
+  const handleEdit = (food) => {
+    setFormData({
+      name: food.name,
+      description: food.description,
+      price: food.price,
+      quantity: food.quantity,
+      category: food.category,
+      image: null,
+    });
+    setCurrentImage(`${import.meta.env.VITE_BACKEND_URL}/${food.image}`);
+    setEditingId(food._id);
+  };
+
+  const handleDelete = async (id) => {
+    const result = await Swal.fire({
+      title: 'Delete Food Item?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/food/${id}`);
+        Swal.fire(
+          'Deleted!',
+          'Food item has been deleted.',
+          'success'
+        );
+        fetchFoods();
+      } catch (error) {
+        Swal.fire(
+          'Error!',
+          'There was an error deleting the item.',
+          'error'
+        );
+      }
+    }
+  };
+
+  const handleNotAvailable = async (id) => {
+    const result = await Swal.fire({
+      title: 'Mark as Unavailable?',
+      text: 'This item will be marked as not available.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, mark it!'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await axios.patch(
+          `${import.meta.env.VITE_BACKEND_URL}/food/${id}/availability`,
+          { available: false }
+        );
+        Swal.fire(
+          'Updated!',
+          'Food item has been marked as unavailable.',
+          'success'
+        );
+        fetchFoods();
+      } catch (error) {
+        Swal.fire(
+          'Error!',
+          'There was an error updating the availability.',
+          'error'
+        );
+      }
+    }
+  };
+
+  const handleAvailable = async (id) => {
+    const result = await Swal.fire({
+      title: 'Mark as Available?',
+      text: 'This item will be marked as available.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, mark it!'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await axios.patch(
+          `${import.meta.env.VITE_BACKEND_URL}/food/${id}/availability`,
+          { available: true }
+        );
+        Swal.fire(
+          'Updated!',
+          'Food item has been marked as available.',
+          'success'
+        );
+        fetchFoods();
+      } catch (error) {
+        Swal.fire(
+          'Error!',
+          'There was an error updating the availability.',
+          'error'
+        );
+      }
+    }
+  };
+
+  const handleCancel = () => {
     setFormData({
       name: "",
       description: "",
@@ -70,32 +229,8 @@ const AddFood = () => {
       category: "Meals",
       image: null,
     });
-  };
-
-  const handleEdit = (food) => {
-    setFormData(food);
-    setEditingId(food._id);
-  };
-
-  const handleDelete = async (id) => {
-    await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/food/${id}`);
-    fetchFoods();
-  };
-
-  const handleNotAvailable = async (id) => {
-    await axios.patch(
-      `${import.meta.env.VITE_BACKEND_URL}/food/${id}/availability`,
-      { available: false }
-    );
-    fetchFoods();
-  };
-
-  const handleAvailable = async (id) => {
-    await axios.patch(
-      `${import.meta.env.VITE_BACKEND_URL}/food/${id}/availability`,
-      { available: true }
-    );
-    fetchFoods();
+    setEditingId(null);
+    setCurrentImage(null);
   };
 
   const filteredFoods = foods.filter(
@@ -157,20 +292,49 @@ const AddFood = () => {
             <option value="Snacks">Snacks</option>
             <option value="Drinks">Drinks</option>
           </select>
-          <input
-            type="file"
-            name="image"
-            onChange={handleChange}
-            accept="image/*"
-            required={!editingId} // Make image required when adding
-            className="w-full mb-4 p-2 border border-gray-300 rounded"
-          />
-          <button
-            type="submit"
-            className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition duration-200"
-          >
-            {editingId ? "Update Food" : "Add Food"}
-          </button>
+          {editingId && currentImage && (
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">Current Image:</p>
+              <img 
+                src={currentImage} 
+                alt="Current food" 
+                className="w-full h-40 object-cover rounded"
+              />
+            </div>
+          )}
+          <div className="mb-4">
+            <input
+              type="file"
+              name="image"
+              onChange={handleChange}
+              accept="image/*"
+              required={!editingId}
+              className="w-full p-2 border border-gray-300 rounded"
+            />
+            {editingId && (
+              <p className="text-sm text-gray-500 mt-1">
+                Leave empty to keep the current image
+              </p>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className="flex-1 bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition duration-200"
+            >
+              {editingId ? "Update Food" : "Add Food"}
+            </button>
+            
+            {editingId && (
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="flex-1 bg-gray-500 text-white p-2 rounded hover:bg-gray-600 transition duration-200"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
       </div>
 
@@ -235,56 +399,64 @@ const AddFood = () => {
             >
               <div className="w-full h-48 relative">
                 <img
-                  src={`${import.meta.env.VITE_BACKEND_URL}/${
-                    food.image
-                  }`} // Ensure this URL is correct
+                  src={`${import.meta.env.VITE_BACKEND_URL}/${food.image}`}
                   alt={food.name}
                   className="w-full h-full object-cover rounded"
                   onError={(e) => {
-                    e.target.onerror = null; // Prevents looping
-                    e.target.src = "path/to/default/image.jpg"; // Fallback image path
+                    e.target.onerror = null;
+                    e.target.src = "path/to/default/image.jpg";
                   }}
                 />
+                {parseInt(food.quantity) <= 5 && food.available && (
+                  <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold animate-pulse">
+                    Low Stock!
+                  </div>
+                )}
               </div>
               <h2 className="text-lg font-bold">{food.name}</h2>
               <p className="text-gray-600">Description: {food.description}</p>
               <p className="text-gray-600">Category: {food.category}</p>
               <p className="text-gray-600">Price: ₱{food.price}</p>
-              <p className="text-gray-600">Quantity: {food.quantity}</p>
-              <p
-                className={`font-bold ${
-                  food.available ? "text-green-500" : "text-red-500"
-                }`}
-              >
+              <p className={`text-gray-600 ${parseInt(food.quantity) <= 5 ? 'text-red-500 font-bold' : ''}`}>
+                Quantity: {food.quantity}
+              </p>
+              <p className={`font-bold ${food.available ? "text-green-500" : "text-red-500"}`}>
                 {food.available ? "Available" : "Not Available"}
               </p>
-              <div className="flex justify-between mt-auto">
+              
+              <div className="flex justify-between mt-auto pt-2 border-t">
                 <button
                   onClick={() => handleEdit(food)}
-                  className="text-blue-500 hover:underline"
+                  className="text-blue-500 hover:text-blue-700 transition-colors"
+                  title="Edit"
                 >
-                  Edit
+                  <FaEdit size={20} />
                 </button>
+                
                 {food.available ? (
                   <button
                     onClick={() => handleNotAvailable(food._id)}
-                    className="text-red-500 hover:underline"
+                    className="text-red-500 hover:text-red-700 transition-colors"
+                    title="Mark as Unavailable"
                   >
-                    Mark as Unavailable
+                    <IoCloseCircle size={22} />
                   </button>
                 ) : (
                   <button
                     onClick={() => handleAvailable(food._id)}
-                    className="text-green-500 hover:underline"
+                    className="text-green-500 hover:text-green-700 transition-colors"
+                    title="Mark as Available"
                   >
-                    Mark as Available
+                    <IoCheckmarkCircle size={22} />
                   </button>
                 )}
+                
                 <button
                   onClick={() => handleDelete(food._id)}
-                  className="text-red-500 hover:underline"
+                  className="text-red-500 hover:text-red-700 transition-colors"
+                  title="Delete"
                 >
-                  Delete
+                  <FaTrashAlt size={18} />
                 </button>
               </div>
             </div>

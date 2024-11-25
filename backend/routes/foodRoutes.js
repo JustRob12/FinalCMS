@@ -98,4 +98,30 @@ router.patch('/:id/availability', async (req, res) => {
     }
 });
 
+// Decrement food quantity
+router.patch('/:id/decrement-quantity', async (req, res) => {
+    try {
+        const { quantity } = req.body;
+        const food = await Food.findById(req.params.id);
+        
+        if (!food) {
+            return res.status(404).json({ message: 'Food item not found.' });
+        }
+
+        if (food.quantity < quantity) {
+            return res.status(400).json({ message: 'Not enough quantity available.' });
+        }
+
+        const updatedFood = await Food.findByIdAndUpdate(
+            req.params.id,
+            { $inc: { quantity: -quantity } },
+            { new: true }
+        );
+
+        res.status(200).json(updatedFood);
+    } catch (error) {
+        res.status(500).json({ message: 'Failed to update food quantity.', error: error.message });
+    }
+});
+
 module.exports = router;

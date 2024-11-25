@@ -13,7 +13,7 @@ const HistoryAdmin = () => {
           const token = localStorage.getItem("token");
           if (!token) throw new Error("No authentication token found.");
   
-          const response = await axios.get(`${backendUrl}/history`, {
+          const response = await axios.get(`${backendUrl}/history/admin`, {
             headers: { Authorization: `Bearer ${token}` },
           });
   
@@ -80,4 +80,3 @@ const HistoryAdmin = () => {
   };
   
   export default HistoryAdmin;
-  

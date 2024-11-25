@@ -6,7 +6,8 @@ const Orders = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [updated, setUpdated] = useState(false); // State to trigger a re-fetch
-
+  const [loadingButton, setLoadingButton] = useState(false);
+  
   const backendUrl = import.meta.env.VITE_BACKEND_URL; // Accessing VITE_BACKEND_URL
 
   // Fetch all orders from the backend
@@ -36,11 +37,32 @@ const Orders = () => {
   }, [backendUrl, updated]); // Add 'updated' to trigger re-fetch
 
   const handleOrderReady = async (order) => {
+    if (loadingButton) return; // Prevent further execution if already processing
+    setLoadingButton(true); // Set loading state
+  
     try {
       const token = localStorage.getItem("token");
   
       if (!token) throw new Error("No authentication token found.");
   
+      // Step 1: Decrement quantities for each food item
+      for (const item of order.items) {
+        if (item.foodId?._id) {
+          try {
+            await axios.patch(
+              `${backendUrl}/food/${item.foodId._id}/decrement-quantity`,
+              { quantity: item.quantity },
+              {
+                headers: { Authorization: `Bearer ${token}` }
+              }
+            );
+          } catch (error) {
+            console.error(`Failed to decrement quantity for item ${item.foodId.name}:`, error);
+            throw new Error(`Failed to update quantity for ${item.foodId.name}`);
+          }
+        }
+      }
+
       const notificationData = {
         orderCode: order.orderCode,
         userId: order.userId._id,
@@ -52,33 +74,29 @@ const Orders = () => {
         createdAt: order.createdAt,
       };
   
-      // Step 1: Send a notification with items, price, and date
+      // Step 2: Send notification
       await axios.post(
         `${backendUrl}/notifications`,
         notificationData,
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          }
+          headers: { Authorization: `Bearer ${token}` }
         }
       );
   
-      // Step 2: Delete the order
+      // Step 3: Delete the order
       await axios.delete(`${backendUrl}/orders/${order._id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` }
       });
   
       alert("Order marked as ready and deleted!");
-  
       setUpdated(!updated); // Trigger re-fetch
     } catch (err) {
       console.error("Error marking order as ready:", err);
-      alert("Failed to mark order as ready.");
+      alert(err.message || "Failed to mark order as ready.");
+    } finally {
+      setLoadingButton(false); // Reset loading state
     }
   };
-  
 
   if (loading) return <p className="text-center mt-10">Loading...</p>;
   if (error) return <p className="text-center text-red-500 mt-10">{error}</p>;
@@ -95,6 +113,8 @@ const Orders = () => {
               <th className="border px-4 py-2">User ID</th>
               <th className="border px-4 py-2">Total Price</th>
               <th className="border px-4 py-2">Items</th>
+              <th className="border px-4 py-2">Course</th>
+              <th className="border px-4 py-2">Year</th>
               <th className="border px-4 py-2">Date</th>
               <th className="border px-4 py-2">Actions</th>
             </tr>
@@ -114,6 +134,8 @@ const Orders = () => {
                     ))}
                   </ul>
                 </td>
+                <td className="border px-4 py-2">{order.userId?.course}</td>
+                <td className="border px-4 py-2">{order.userId?.year}</td>
                 <td className="border px-4 py-2">
                   {new Date(order.createdAt).toLocaleString()}
                 </td>

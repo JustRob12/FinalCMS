@@ -9,6 +9,7 @@ const cartRoutes = require("./routes/cart");
 const orderRoutes = require("./routes/orderRoutes");
 const notificationRoutes = require("./routes/notification");
 const historyRoutes = require("./routes/history"); // Import history routes
+const reportRoutes = require('./routes/reportRoutes');
 const path = require("path");
 
 dotenv.config();
@@ -28,6 +29,7 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use('/api/history', historyRoutes);
+app.use('/api/reports', reportRoutes);
 
 const PORT = process.env.PORT || 5000;
 
