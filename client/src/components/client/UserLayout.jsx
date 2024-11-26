@@ -11,12 +11,16 @@ const UserLayout = ({ user, setUser, children }) => {
   };
 
   return (
-    <div>
-      
+    <div className="min-h-screen bg-gray-50">
       <Header user={user} onLogout={handleLogout} />
-      <UserNavbar/>
-      <main>{children}</main>
+      <UserNavbar />
       
+      {/* Main Content */}
+      <main className="pt-16 md:ml-64">
+        <div className="container mx-auto px-4 py-6">
+          {children}
+        </div>
+      </main>
     </div>
   );
 };

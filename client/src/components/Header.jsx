@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { AiOutlineUser } from 'react-icons/ai';
+import { MdLogout } from 'react-icons/md';
 
 const Header = ({ user, onLogout }) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -11,25 +12,61 @@ const Header = ({ user, onLogout }) => {
     };
 
     return (
-        <header className="flex flex-col md:flex-row justify-between items-center p-4 bg-indigo-600 text-white">
-            <h1 className="text-xl font-bold">Campus Bite</h1>
-            <div className="relative mt-2 md:mt-0">
-                <button onClick={toggleDropdown} className="flex items-center focus:outline-none">
-                    <AiOutlineUser className="w-6 h-6" />
-                    <span className="ml-2">{user?.name}</span>
-                </button>
-                {dropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white text-gray-800 rounded-md shadow-lg z-20">
-                        <button
-                            onClick={onLogout} // This triggers the logout
-                            className="block px-4 py-2 text-left w-full hover:bg-indigo-600 hover:text-white"
-                        >
-                            Logout
-                        </button>
+        <>
+            {/* Fixed Header */}
+            <header className="fixed top-0 left-0 right-0 bg-indigo-600 shadow-md z-50">
+                <div className="container mx-auto px-4">
+                    <div className="flex justify-between items-center h-16">
+                        {/* Logo/Title */}
+                        <h1 className="text-xl font-bold text-white">Campus Bite</h1>
+
+                        {/* User Profile */}
+                        <div className="relative">
+                            <button 
+                                onClick={toggleDropdown} 
+                                className="flex items-center space-x-2 text-white hover:bg-indigo-700 rounded-full py-2 px-3 transition-colors"
+                            >
+                                <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                                    <span className="text-indigo-600 font-semibold">
+                                        {user?.name?.charAt(0).toUpperCase()}
+                                    </span>
+                                </div>
+                                <span className="hidden md:block">{user?.name}</span>
+                            </button>
+
+                            {/* Dropdown Menu */}
+                            {dropdownOpen && (
+                                <>
+                                    {/* Overlay to close dropdown */}
+                                    <div 
+                                        className="fixed inset-0 z-10"
+                                        onClick={() => setDropdownOpen(false)}
+                                    />
+                                    
+                                    {/* Dropdown Content */}
+                                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-2 z-20">
+                                        <div className="px-4 py-2 border-b border-gray-100">
+                                            <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                                            <p className="text-xs text-gray-500">{user?.email}</p>
+                                        </div>
+                                        <button
+                                            onClick={onLogout}
+                                            className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                        >
+                                            <MdLogout className="w-4 h-4 mr-2" />
+                                            Sign out
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     </div>
-                )}
-            </div>
-        </header>
+                </div>
+            </header>
+
+            {/* Spacer to prevent content from going under fixed header */}
+            <div className="h-16" />
+        </>
     );
 };
 
