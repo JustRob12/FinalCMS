@@ -36,32 +36,20 @@ router.post('/', verifyToken, async (req, res) => {
     // Generate the random order code
     const orderCode = generateRandomCode();
 
-    // Create a new order with user information
+    // Create a new order
     const newOrder = new Order({
       userId: req.user.id,
       items: cartItems,
       totalPrice,
       orderCode,
-      course: user.course, // Include user's course
-      year: user.year, // Include user's year
+      course: user.course,
+      year: user.year,
     });
-
     await newOrder.save();
-
-    // // Optionally, create a notification for this order
-    const newNotification = new Notification({
-      orderCode,
-      userId: req.user.id,
-      totalPrice,
-      message: 'Order placed successfully',
-    });
-
-    await newNotification.save();
 
     res.status(201).json({
       message: 'Order placed successfully',
-      order: newOrder,
-      notification: newNotification,
+      order: newOrder
     });
   } catch (error) {
     console.error('Error creating order:', error);
