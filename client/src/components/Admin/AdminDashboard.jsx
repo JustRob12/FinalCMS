@@ -43,10 +43,10 @@ const AdminDashboard = () => {
   const fetchCurrentData = async () => {
     try {
       const [todayResponse, monthResponse] = await Promise.all([
-        axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/reports/comprehensive?range=today`, {
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/reports/comprehensive?range=today`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         }),
-        axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/reports/comprehensive?range=month`, {
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/reports/comprehensive?range=month`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         })
       ]);

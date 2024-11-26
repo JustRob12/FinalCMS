@@ -8,9 +8,18 @@ const historySchema = new mongoose.Schema({
   items: [{
     foodName: { type: String, required: true }, // Name of the food item
     quantity: { type: Number, required: true }, // Quantity of the food item
+    price: { type: Number, required: true } // Price of the food item
   }],
   totalPrice: { type: Number, required: true }, // Total price of the order
-  date: { type: Date, default: Date.now } // Date when the order was received
+  date: { type: Date, default: Date.now }, // Date when the order was received
+  payment: {
+    type: Number,
+    required: true
+  },
+  change: {
+    type: Number,
+    required: true
+  }
 });
 
 // Create and export the model

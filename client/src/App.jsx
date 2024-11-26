@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
+import { Route, BrowserRouter as Router, Routes, Navigate } from 'react-router-dom';
 import AddFood from './components/Admin/AddFood';
 import AdminDashboard from './components/Admin/AdminDashboard';
 import AdminLayout from './components/Admin/AdminLayout';
@@ -39,7 +39,7 @@ const App = () => {
   );
 
   const renderUserLayout = (children) => (
-    user?.role === 'user' ? (
+    (user?.role === 'user' || user?.role === 'faculty') ? (
       <UserLayout user={user} setUser={setUser}>
         {children}
       </UserLayout>
@@ -56,7 +56,13 @@ const App = () => {
         <Route path="/signup" element={<Signup />} />
         <Route
           path="/user-dashboard"
-          element={renderUserLayout(<UserDashboard />)}
+          element={
+            user?.role === 'admin' ? (
+              <Navigate to="/admin-dashboard" replace />
+            ) : (
+              renderUserLayout(<UserDashboard />)
+            )
+          }
         />
         <Route
           path="/admin-dashboard"

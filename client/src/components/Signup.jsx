@@ -8,6 +8,7 @@ const Signup = () => {
     const [formData, setFormData] = useState({
         name: '',
         id: '',
+        gsisId: '',
         course: '',
         year: '',
         username: '',
@@ -75,6 +76,18 @@ const Signup = () => {
                         />
                     </div>
 
+                    {/* Show GSIS ID field only when role is faculty */}
+                    {formData.role === 'faculty' && (
+                        <input
+                            type="text"
+                            name="gsisId"
+                            placeholder="GSIS ID"
+                            onChange={handleChange}
+                            required
+                            className="w-full px-3 py-2 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                        />
+                    )}
+
                     {/* Dropdown for Course */}
                     <select
                         name="course"
@@ -138,6 +151,7 @@ const Signup = () => {
                         className="w-full px-3 py-2 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-indigo-400"
                     >
                         <option value="user">User</option>
+                        <option value="faculty">Faculty</option>
                         <option value="admin">Admin</option>
                     </select>
 

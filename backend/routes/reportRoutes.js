@@ -54,11 +54,52 @@ router.get('/comprehensive', verifyToken, async (req, res) => {
     const totalRevenue = filteredHistory.reduce((sum, entry) => sum + (entry.totalPrice || 0), 0);
     const totalOrders = filteredHistory.length;
 
+    // Add user metrics aggregation
+    const userMetrics = await User.aggregate([
+      {
+        $group: {
+          _id: '$role',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const orderMetrics = await History.aggregate([
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'user'
+        }
+      },
+      {
+        $unwind: '$user'
+      },
+      {
+        $group: {
+          _id: '$user.role',
+          orders: { $sum: 1 },
+          revenue: { $sum: '$totalPrice' }
+        }
+      }
+    ]);
+
+    // Format the user metrics
+    const formattedUserMetrics = {
+      regularUsers: userMetrics.find(m => m._id === 'user')?.count || 0,
+      facultyUsers: userMetrics.find(m => m._id === 'faculty')?.count || 0,
+      regularOrders: orderMetrics.find(m => m._id === 'user')?.orders || 0,
+      facultyOrders: orderMetrics.find(m => m._id === 'faculty')?.orders || 0,
+      regularRevenue: orderMetrics.find(m => m._id === 'user')?.revenue || 0,
+      facultyRevenue: orderMetrics.find(m => m._id === 'faculty')?.revenue || 0,
+    };
+
     // Get recent activity
     const recentHistory = await History.find()
       .sort({ date: -1 })
       .limit(10)
-      .populate('userId', 'name course year');
+      .populate('userId', 'name course year role');
 
     // Add low stock query
     const lowStockItems = await Food.find({
@@ -82,12 +123,14 @@ router.get('/comprehensive', verifyToken, async (req, res) => {
         thisYear: range === 'year' ? totalRevenue : 0,
         averageOrderValue: totalOrders > 0 ? totalRevenue / totalOrders : 0
       },
+      userMetrics: formattedUserMetrics,
       recentActivity: {
         history: recentHistory.map(entry => ({
           orderCode: entry.orderCode,
           customerName: entry.userId?.name || 'Unknown',
           course: entry.userId?.course,
           year: entry.userId?.year,
+          role: entry.userId?.role,
           total: entry.totalPrice,
           items: entry.items,
           date: format(new Date(entry.date), 'yyyy-MM-dd HH:mm')

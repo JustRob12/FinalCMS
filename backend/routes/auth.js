@@ -6,23 +6,46 @@ const router = express.Router();
 
 // Sign up
 router.post('/signup', async (req, res) => {
-    const { name, id, course, year, username, password, role } = req.body;
+    const { name, id, gsisId, course, year, username, password, role } = req.body;
 
     try {
+        // Check if username already exists
+        const existingUsername = await User.findOne({ username });
+        if (existingUsername) {
+            return res.status(400).json({ message: 'Username already exists' });
+        }
+
+        // Check if ID already exists
+        const existingId = await User.findOne({ id });
+        if (existingId) {
+            return res.status(400).json({ message: 'ID already exists' });
+        }
+
+        // Validate GSIS ID for faculty
+        if (role === 'faculty' && !gsisId) {
+            return res.status(400).json({ message: 'GSIS ID is required for faculty members' });
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = new User({
             name,
             id,
+            gsisId: role === 'faculty' ? gsisId : null,  // Only set GSIS ID for faculty
             course,
             year,
             username,
             password: hashedPassword,
             role,
         });
+
         await newUser.save();
         res.status(201).json({ message: 'User created successfully' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Signup error:', error);  // Add detailed error logging
+        res.status(500).json({ 
+            message: 'Error creating user',
+            error: error.message 
+        });
     }
 });
 
@@ -56,7 +79,8 @@ router.post('/login', async (req, res) => {
                 role: user.role, 
                 name: user.name,
                 course: user.course,
-                year: user.year
+                year: user.year,
+                gsisId: user.role === 'faculty' ? user.gsisId : undefined  // Include GSIS ID for faculty
             } 
         });
     } catch (error) {

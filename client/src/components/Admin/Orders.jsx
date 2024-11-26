@@ -91,6 +91,19 @@ const Orders = () => {
     }
   };
 
+  // Sort orders to prioritize faculty orders
+  const sortedOrders = orders.sort((a, b) => {
+    // Faculty orders come first
+    if (a.userId?.role === 'faculty' && b.userId?.role !== 'faculty') return -1;
+    if (a.userId?.role !== 'faculty' && b.userId?.role === 'faculty') return 1;
+    // Then sort by creation time
+    return new Date(a.createdAt) - new Date(b.createdAt);
+  });
+
+  // Group orders by type
+  const facultyOrders = sortedOrders.filter(order => order.userId?.role === 'faculty');
+  const regularOrders = sortedOrders.filter(order => order.userId?.role !== 'faculty');
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -116,83 +129,183 @@ const Orders = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {orders.map((order) => (
-            <div
-              key={order._id}
-              className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-            >
-              <div className="p-4 border-b">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-semibold text-gray-600">
-                    Order Code:
-                  </span>
-                  <span className="text-sm font-bold text-blue-600">
-                    {order.orderCode}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Total:</span>
-                  <span className="text-lg font-bold text-green-600">
-                    ₱{order.totalPrice.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-4 bg-gray-50">
-                <div className="mb-4">
-                  <h3 className="text-sm font-semibold text-gray-600 mb-2">
-                    Customer Details
-                  </h3>
-                  <p className="text-sm">{order.userId?.name}</p>
-                  <p className="text-sm text-gray-600">
-                    {order.userId?.course} - Year {order.userId?.year}
-                  </p>
-                </div>
-
-                <div className="mb-4">
-                  <h3 className="text-sm font-semibold text-gray-600 mb-2">
-                    Order Items
-                  </h3>
-                  <ul className="space-y-1">
-                    {order.items.map((item, index) => (
-                      <li key={index} className="text-sm flex justify-between">
-                        <span>{item.foodId?.name}</span>
-                        <span className="text-gray-600">x{item.quantity}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="text-xs text-gray-500 mb-4">
-                  Ordered at: {new Date(order.createdAt).toLocaleString()}
-                </div>
-
-                <button
-                  onClick={() => handleOrderReady(order)}
-                  disabled={processingOrders.has(order._id)}
-                  className={`w-full py-2 px-4 rounded-md flex items-center justify-center gap-2 ${
-                    processingOrders.has(order._id)
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-blue-500 hover:bg-blue-600'
-                  } text-white transition-colors`}
+        {/* Faculty Orders Section */}
+        {facultyOrders.length > 0 && (
+          <>
+            <h2 className="text-xl font-semibold text-yellow-600 mb-4 mt-6">
+              Priority Orders (Faculty)
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {facultyOrders.map((order) => (
+                <div
+                  key={order._id}
+                  className="bg-yellow-50 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow border-2 border-yellow-200"
                 >
-                  {processingOrders.has(order._id) ? (
-                    <>
-                      <FaSpinner className="animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <FaCheck />
-                      Order is Ready
-                    </>
-                  )}
-                </button>
-              </div>
+                  {/* Priority Badge */}
+                  <div className="bg-yellow-500 text-white text-xs font-bold px-2 py-1 text-center">
+                    FACULTY PRIORITY
+                  </div>
+                  
+                  {/* Rest of the order card content */}
+                  <div className="p-4 border-b border-yellow-200">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-semibold text-gray-600">
+                        Order Code:
+                      </span>
+                      <span className="text-sm font-bold text-blue-600">
+                        {order.orderCode}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Total:</span>
+                      <span className="text-lg font-bold text-green-600">
+                        ₱{order.totalPrice.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-yellow-50">
+                    <div className="mb-4">
+                      <h3 className="text-sm font-semibold text-gray-600 mb-2">
+                        Customer Details
+                      </h3>
+                      <p className="text-sm">{order.userId?.name}</p>
+                      <p className="text-sm text-gray-600">
+                        {order.userId?.course} - Year {order.userId?.year}
+                      </p>
+                    </div>
+
+                    <div className="mb-4">
+                      <h3 className="text-sm font-semibold text-gray-600 mb-2">
+                        Order Items
+                      </h3>
+                      <ul className="space-y-1">
+                        {order.items.map((item, index) => (
+                          <li key={index} className="text-sm flex justify-between">
+                            <span>{item.foodId?.name}</span>
+                            <span className="text-gray-600">x{item.quantity}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="text-xs text-gray-500 mb-4">
+                      Ordered at: {new Date(order.createdAt).toLocaleString()}
+                    </div>
+
+                    <button
+                      onClick={() => handleOrderReady(order)}
+                      disabled={processingOrders.has(order._id)}
+                      className={`w-full py-2 px-4 rounded-md flex items-center justify-center gap-2 ${
+                        processingOrders.has(order._id)
+                          ? 'bg-gray-400 cursor-not-allowed'
+                          : 'bg-yellow-600 hover:bg-yellow-700'
+                      } text-white transition-colors`}
+                    >
+                      {processingOrders.has(order._id) ? (
+                        <>
+                          <FaSpinner className="animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <FaCheck />
+                          Order is Ready
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        )}
+
+        {/* Regular Orders Section */}
+        {regularOrders.length > 0 && (
+          <>
+            <h2 className="text-xl font-semibold text-gray-700 mb-4 mt-6">
+              Regular Orders
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {regularOrders.map((order) => (
+                <div
+                  key={order._id}
+                  className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                >
+                  <div className="p-4 border-b">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-semibold text-gray-600">
+                        Order Code:
+                      </span>
+                      <span className="text-sm font-bold text-blue-600">
+                        {order.orderCode}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Total:</span>
+                      <span className="text-lg font-bold text-green-600">
+                        ₱{order.totalPrice.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-gray-50">
+                    <div className="mb-4">
+                      <h3 className="text-sm font-semibold text-gray-600 mb-2">
+                        Customer Details
+                      </h3>
+                      <p className="text-sm">{order.userId?.name}</p>
+                      <p className="text-sm text-gray-600">
+                        {order.userId?.course} - Year {order.userId?.year}
+                      </p>
+                    </div>
+
+                    <div className="mb-4">
+                      <h3 className="text-sm font-semibold text-gray-600 mb-2">
+                        Order Items
+                      </h3>
+                      <ul className="space-y-1">
+                        {order.items.map((item, index) => (
+                          <li key={index} className="text-sm flex justify-between">
+                            <span>{item.foodId?.name}</span>
+                            <span className="text-gray-600">x{item.quantity}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="text-xs text-gray-500 mb-4">
+                      Ordered at: {new Date(order.createdAt).toLocaleString()}
+                    </div>
+
+                    <button
+                      onClick={() => handleOrderReady(order)}
+                      disabled={processingOrders.has(order._id)}
+                      className={`w-full py-2 px-4 rounded-md flex items-center justify-center gap-2 ${
+                        processingOrders.has(order._id)
+                          ? 'bg-gray-400 cursor-not-allowed'
+                          : 'bg-blue-500 hover:bg-blue-600'
+                      } text-white transition-colors`}
+                    >
+                      {processingOrders.has(order._id) ? (
+                        <>
+                          <FaSpinner className="animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <FaCheck />
+                          Order is Ready
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
 
         {orders.length === 0 && (
           <div className="text-center py-12">

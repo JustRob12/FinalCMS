@@ -155,6 +155,9 @@ const HistoryAdmin = () => {
                   Order Details
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Payment Info
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Customer Info
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -171,6 +174,12 @@ const HistoryAdmin = () => {
                       {formatDisplayDate(entry.createdAt)}
                     </div>
                     <div className="text-sm font-semibold text-green-600">₱{entry.totalPrice.toFixed(2)}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm">
+                      <div className="font-medium text-gray-900">Payment: ₱{entry.payment?.toFixed(2)}</div>
+                      <div className="text-green-600">Change: ₱{entry.change?.toFixed(2)}</div>
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-900">{entry.userName}</div>

@@ -61,11 +61,11 @@ router.post('/', verifyToken, async (req, res) => {
 router.get('/', verifyToken, async (req, res) => {
   try {
     const orders = await Order.find()
-      .populate('items.foodId') // Populate food items
       .populate({
-        path: 'userId', // Populate user details using the userId
-        select: 'name course year', // Include name, course, and year
-      });
+        path: 'userId',
+        select: 'name course year role'
+      })
+      .populate('items.foodId');
 
     res.status(200).json(orders);
   } catch (error) {

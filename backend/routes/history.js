@@ -7,7 +7,7 @@ const verifyToken = require('../middleware/auth');
 router.get('/user', verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    console.log('Fetching history for user:', userId); // Debug log
+    console.log('Fetching history for user:', userId);
 
     const history = await History.find({ userId })
       .sort({ date: -1 })
@@ -17,6 +17,8 @@ router.get('/user', verifyToken, async (req, res) => {
       _id: entry._id,
       orderCode: entry.orderCode,
       totalPrice: entry.totalPrice,
+      payment: entry.payment,
+      change: entry.change,
       createdAt: entry.date,
       formattedDate: entry.date ? new Date(entry.date).toLocaleString() : null,
       items: entry.items,
@@ -25,7 +27,7 @@ router.get('/user', verifyToken, async (req, res) => {
       userYear: entry.userId ? entry.userId.year : 'Unknown'
     }));
 
-    console.log('Formatted history:', formattedHistory); // Debug log
+    console.log('Formatted history:', formattedHistory);
     res.json(formattedHistory);
   } catch (err) {
     console.error("Error fetching history:", err);
@@ -51,6 +53,8 @@ router.get('/admin', verifyToken, async (req, res) => {
       _id: entry._id,
       orderCode: entry.orderCode,
       totalPrice: entry.totalPrice,
+      payment: entry.payment,
+      change: entry.change,
       createdAt: entry.date.toISOString(),
       items: entry.items,
       userName: entry.userId ? entry.userId.name : 'Unknown',
@@ -64,6 +68,50 @@ router.get('/admin', verifyToken, async (req, res) => {
     res.status(500).json({ 
       message: 'Failed to fetch all histories.', 
       error: err.message 
+    });
+  }
+});
+
+// Add validation to your history route
+router.post('/', verifyToken, async (req, res) => {
+  try {
+    const { 
+      orderCode, 
+      userId, 
+      items, 
+      totalPrice, 
+      payment, 
+      change, 
+      date 
+    } = req.body;
+
+    // Validate required fields
+    if (!orderCode || !userId || !items || !totalPrice || !payment) {
+      return res.status(400).json({ 
+        message: 'Missing required fields' 
+      });
+    }
+
+    const history = new History({
+      orderCode,
+      userId,
+      items,
+      totalPrice,
+      payment,
+      change,
+      date: date || new Date()
+    });
+
+    await history.save();
+    res.status(201).json({ 
+      message: 'History created successfully', 
+      history 
+    });
+  } catch (error) {
+    console.error('Error creating history:', error);
+    res.status(500).json({ 
+      message: 'Error creating history', 
+      error: error.message 
     });
   }
 });

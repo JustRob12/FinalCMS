@@ -49,7 +49,10 @@ router.get('/', verifyToken, async (req, res) => {
 router.get('/all', verifyToken, async (req, res) => {
   try {
     const notifications = await Notification.find()
-      .populate('userId', 'name course year') // Add course and year to populated fields
+      .populate({
+        path: 'userId',
+        select: 'name course year role' // Added role to selected fields
+      })
       .sort({ createdAt: -1 });
 
     // Transform the data to include user details
@@ -59,11 +62,12 @@ router.get('/all', verifyToken, async (req, res) => {
       totalPrice: notification.totalPrice,
       items: notification.items,
       timer: notification.timer,
-      timeLeft: notification.timer - Date.now(), // Calculate time left
+      timeLeft: notification.timer - Date.now(),
       userId: notification.userId,
       course: notification.userId?.course || 'N/A',
       year: notification.userId?.year || 'N/A',
-      name: notification.userId?.name || 'N/A'
+      name: notification.userId?.name || 'N/A',
+      role: notification.userId?.role || 'user' // Added role to the formatted data
     }));
 
     res.status(200).json(formattedNotifications);
@@ -94,29 +98,75 @@ router.delete('/:id', verifyToken, async (req, res) => {
 
 router.patch("/:id/received", verifyToken, async (req, res) => {
   try {
-    const { userId, items, totalPrice, activatedAt } = req.body; // Include activatedAt
-
-    const notification = await Notification.findById(req.params.id);
+    const { userId, items, totalPrice, payment, change, activatedAt } = req.body;
     
+    // Update notification status
+    const notification = await Notification.findByIdAndUpdate(
+      req.params.id,
+      {
+        status: 'received',
+        payment,
+        change,
+        activatedAt
+      },
+      { new: true }
+    );
+
+    // Create history entry
+    const history = new History({
+      orderCode: notification.orderCode,
+      userId,
+      items,
+      totalPrice,
+      payment,
+      change,
+      date: activatedAt
+    });
+    await history.save();
+
+    res.json({ message: 'Order received successfully', notification });
+  } catch (error) {
+    console.error('Error updating notification:', error);
+    res.status(500).json({ message: 'Error updating notification', error: error.message });
+  }
+});
+
+router.patch('/:id/activate', verifyToken, async (req, res) => {
+  try {
+    const { 
+      userId, 
+      items, 
+      totalPrice, 
+      payment, 
+      change, 
+      activatedAt 
+    } = req.body;
+
+    const notification = await Notification.findByIdAndUpdate(
+      req.params.id,
+      {
+        status: 'completed',
+        payment,
+        change,
+        activatedAt
+      },
+      { new: true }
+    );
+
     if (!notification) {
-      return res.status(404).json({ message: "Notification not found." });
+      return res.status(404).json({ message: 'Notification not found' });
     }
 
-    const historyEntry = new History({
-      userId,
-      orderCode: notification.orderCode,
-      totalPrice,
-      items,
-      activatedAt,  // Include activatedAt in the history entry
+    res.json({ 
+      message: 'Notification activated successfully', 
+      notification 
     });
-
-    await historyEntry.save();
-    await notification.deleteOne();
-
-    res.json({ message: "Order marked as received and added to history." });
   } catch (error) {
-    console.error("Error marking order as received:", error.message); // Log the specific error message
-    res.status(500).json({ message: "Server error.", error: error.message });
+    console.error('Error activating notification:', error);
+    res.status(500).json({ 
+      message: 'Error activating notification', 
+      error: error.message 
+    });
   }
 });
 
