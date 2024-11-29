@@ -116,4 +116,16 @@ router.post('/', verifyToken, async (req, res) => {
   }
 });
 
+router.delete('/:id', verifyToken, async (req, res) => {
+  try {
+    const deletedHistory = await History.findByIdAndDelete(req.params.id);
+    if (!deletedHistory) {
+      return res.status(404).json({ message: 'Record not found' });
+    }
+    res.json({ message: 'Record deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting record', error: error.message });
+  }
+});
+
 module.exports = router;

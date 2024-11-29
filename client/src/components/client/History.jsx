@@ -1,6 +1,9 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
-import { FaReceipt, FaTimes } from "react-icons/fa";
+import { FaReceipt, FaTimes, FaDownload, FaTrash } from "react-icons/fa";
+import Swal from "sweetalert2";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 const History = () => {
   const [history, setHistory] = useState([]);
@@ -36,6 +39,89 @@ const History = () => {
     fetchHistory();
   }, [backendUrl]);
 
+  const handleDelete = async (entryId) => {
+    try {
+      const result = await Swal.fire({
+        title: 'Delete Record',
+        text: 'Are you sure you want to delete this record?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#EF4444',
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'Yes, delete it!'
+      });
+
+      if (result.isConfirmed) {
+        const token = localStorage.getItem("token");
+        await axios.delete(`${backendUrl}/history/${entryId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        setHistory(history.filter(entry => entry._id !== entryId));
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Deleted!',
+          text: 'Record has been deleted.',
+          showConfirmButton: false,
+          timer: 1500,
+          position: 'top-end',
+          toast: true
+        });
+      }
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to delete record.',
+        confirmButtonColor: '#4F46E5'
+      });
+    }
+  };
+
+  const downloadReceipt = async (receipt) => {
+    const receiptElement = document.getElementById('receipt-content');
+    if (!receiptElement) return;
+
+    try {
+      const canvas = await html2canvas(receiptElement, {
+        scale: 2,
+        backgroundColor: '#ffffff'
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: [80, 150] // Receipt size
+      });
+
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`receipt-${receipt.orderCode}.pdf`);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Downloaded!',
+        text: 'Receipt has been downloaded successfully.',
+        showConfirmButton: false,
+        timer: 1500,
+        position: 'top-end',
+        toast: true
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to download receipt.',
+        confirmButtonColor: '#4F46E5'
+      });
+    }
+  };
+
   // Receipt Modal Component
   const ReceiptModal = ({ receipt, onClose }) => {
     if (!receipt) return null;
@@ -45,12 +131,35 @@ const History = () => {
         <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Receipt</h2>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-              <FaTimes size={20} />
-            </button>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => downloadReceipt(receipt)}
+                className="text-indigo-600 hover:text-indigo-800 p-2"
+                title="Download Receipt"
+              >
+                <FaDownload size={20} />
+              </button>
+              <button 
+                onClick={() => {
+                  onClose();
+                  handleDelete(receipt._id);
+                }}
+                className="text-red-600 hover:text-red-800 p-2"
+                title="Delete Record"
+              >
+                <FaTrash size={20} />
+              </button>
+              <button 
+                onClick={onClose} 
+                className="text-gray-500 hover:text-gray-700 p-2"
+                title="Close"
+              >
+                <FaTimes size={20} />
+              </button>
+            </div>
           </div>
           
-          <div className="border-t border-b py-4 mb-4">
+          <div id="receipt-content" className="border-t border-b py-4 mb-4 bg-white">
             <h3 className="text-center font-bold text-xl mb-2">Campus Bite</h3>
             <p className="text-center text-gray-600 text-sm mb-4">Digital Receipt</p>
             
@@ -165,13 +274,22 @@ const History = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <button
-                      onClick={() => setSelectedReceipt(entry)}
-                      className="flex items-center px-3 py-2 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 transition-colors"
-                    >
-                      <FaReceipt className="mr-2" />
-                      View Receipt
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setSelectedReceipt(entry)}
+                        className="flex items-center px-3 py-2 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 transition-colors"
+                      >
+                        <FaReceipt className="mr-2" />
+                        View
+                      </button>
+                      <button
+                        onClick={() => handleDelete(entry._id)}
+                        className="flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors"
+                      >
+                        <FaTrash className="mr-2" />
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -2,6 +2,7 @@ import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { Link } from 'react-router-dom';
 import { FaShoppingCart, FaArrowRight } from 'react-icons/fa';
+import Swal from 'sweetalert2';
 
 const Cart = () => {
   const [cart, setCart] = useState(null);
@@ -39,22 +40,48 @@ const Cart = () => {
 
   const handleRemoveItem = async (foodId) => {
     try {
-      await axios.delete(
-        `${import.meta.env.VITE_BACKEND_URL}/cart/item/${foodId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      setCart((prevCart) => ({
-        ...prevCart,
-        foodItems: prevCart.foodItems.filter((item) => item.foodId._id !== foodId),
-      }));
-      alert("Item removed from cart.");
+      // Show confirmation dialog first
+      const result = await Swal.fire({
+        title: 'Remove Item?',
+        text: 'Are you sure you want to remove this item from your cart?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#EF4444', // red-500
+        cancelButtonColor: '#6B7280', // gray-500
+        confirmButtonText: 'Yes, remove it!'
+      });
+
+      if (result.isConfirmed) {
+        await axios.delete(
+          `${import.meta.env.VITE_BACKEND_URL}/cart/item/${foodId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        setCart((prevCart) => ({
+          ...prevCart,
+          foodItems: prevCart.foodItems.filter((item) => item.foodId._id !== foodId),
+        }));
+        
+        Swal.fire({
+          icon: 'success',
+          title: 'Removed!',
+          text: 'Item has been removed from your cart',
+          showConfirmButton: false,
+          timer: 1500,
+          position: 'top-end',
+          toast: true
+        });
+      }
     } catch (error) {
-      console.error("Error removing item from cart:", error);
-      alert("Failed to remove item.");
+      Swal.fire({
+        icon: 'error',
+        title: 'Oops...',
+        text: 'Failed to remove item from cart',
+        confirmButtonColor: '#4F46E5'
+      });
     }
   };
 
@@ -77,8 +104,12 @@ const Cart = () => {
         return { ...prevCart, foodItems: updatedItems };
       });
     } catch (error) {
-      console.error("Error incrementing item:", error);
-      alert("Failed to increment item.");
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to increment item quantity',
+        confirmButtonColor: '#4F46E5'
+      });
     }
   };
 
@@ -101,40 +132,67 @@ const Cart = () => {
         return { ...prevCart, foodItems: updatedItems };
       });
     } catch (error) {
-      console.error("Error decrementing item:", error);
-      alert("Failed to decrement item.");
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to decrement item quantity',
+        confirmButtonColor: '#4F46E5'
+      });
     }
   };
 
   const handlePlaceOrder = async () => {
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/orders`,
-        { 
-          cartItems: cart.foodItems,
-          course,
-          year,
-          userId 
-        },
-        { 
+      // Show confirmation dialog first
+      const result = await Swal.fire({
+        title: 'Place Order',
+        text: 'Are you sure you want to place this order?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#22C55E', // green-500
+        cancelButtonColor: '#6B7280', // gray-500
+        confirmButtonText: 'Yes, place order!'
+      });
+
+      if (result.isConfirmed) {
+        const response = await axios.post(
+          `${import.meta.env.VITE_BACKEND_URL}/orders`,
+          { 
+            cartItems: cart.foodItems,
+            course,
+            year,
+            userId 
+          },
+          { 
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/cart`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
-      );
+        });
 
-      alert(`Order placed successfully! Your order code is: ${response.data.order.orderCode}`);
+        setCart(null);
 
-      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/cart`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      setCart(null); // Clear the cart state
+        // Show success message with order code
+        Swal.fire({
+          icon: 'success',
+          title: 'Order Placed Successfully!',
+          html: `Your order code is: <br><strong>${response.data.order.orderCode}</strong>`,
+          confirmButtonColor: '#22C55E'
+        });
+      }
     } catch (error) {
-      console.error("Error placing order:", error);
-      alert("Failed to place order.");
+      Swal.fire({
+        icon: 'error',
+        title: 'Order Failed',
+        text: error.response?.data?.message || 'Failed to place order',
+        confirmButtonColor: '#4F46E5'
+      });
     }
   };
 

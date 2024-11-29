@@ -1,5 +1,6 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
+import Swal from 'sweetalert2';
 
 // Move PaymentModal outside of DeployedOrders
 const PaymentModal = ({ notification, onClose, onConfirm }) => {
@@ -162,19 +163,47 @@ const DeployedOrders = () => {
 
   // Handle deletion of a notification
   const handleDelete = async (id) => {
-    const token = localStorage.getItem("token");
-    try {
-      await axios.delete(`${backendUrl}/notifications/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      // Remove the deleted notification from state
-      setNotifications(notifications.filter(notification => notification._id !== id));
-      setFilteredNotifications(filteredNotifications.filter(notification => notification._id !== id));
-    } catch (err) {
-      console.error("Error deleting notification:", err);
-      setError("Failed to delete notification.");
+    // Add confirmation dialog
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (result.isConfirmed) {
+      const token = localStorage.getItem("token");
+      try {
+        await axios.delete(`${backendUrl}/notifications/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        // Remove the deleted notification from state
+        setNotifications(notifications.filter(notification => notification._id !== id));
+        setFilteredNotifications(filteredNotifications.filter(notification => notification._id !== id));
+        
+        // Success alert
+        Swal.fire({
+          icon: 'success',
+          title: 'Deleted!',
+          text: 'The notification has been deleted.',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } catch (err) {
+        console.error("Error deleting notification:", err);
+        
+        // Error alert
+        Swal.fire({
+          icon: 'error',
+          title: 'Error!',
+          text: 'Failed to delete notification.',
+        });
+      }
     }
   };
 
@@ -194,29 +223,7 @@ const DeployedOrders = () => {
     try {
       const token = localStorage.getItem("token");
       
-      // First, update the notification status
-      await axios.patch(
-        `${backendUrl}/notifications/${notification._id}/activate`,
-        {
-          userId: notification.userId._id,
-          items: notification.items,
-          totalPrice: notification.totalPrice,
-          payment: paymentAmount,
-          change: change,
-          activatedAt: new Date()
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      // Calculate price per item based on totalPrice and quantities
-      const totalQuantity = notification.items.reduce((sum, item) => sum + item.quantity, 0);
-      const pricePerItem = notification.totalPrice / totalQuantity;
-
-      // Then create history entry with calculated prices
+      // Create history entry first
       await axios.post(
         `${backendUrl}/history`,
         {
@@ -225,7 +232,7 @@ const DeployedOrders = () => {
           items: notification.items.map(item => ({
             foodName: item.foodName,
             quantity: item.quantity,
-            price: pricePerItem // Add calculated price per item
+            price: notification.totalPrice / notification.items.reduce((sum, item) => sum + item.quantity, 0)
           })),
           totalPrice: notification.totalPrice,
           payment: paymentAmount,
@@ -239,7 +246,14 @@ const DeployedOrders = () => {
         }
       );
 
-      // Remove from paused set before removing from notifications
+      // Then delete the notification
+      await axios.delete(`${backendUrl}/notifications/${notification._id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      // Remove from paused set and notifications state
       setPausedNotifications(prev => {
         const next = new Set(prev);
         next.delete(notification._id);
@@ -248,11 +262,25 @@ const DeployedOrders = () => {
 
       setNotifications(prev => prev.filter(n => n._id !== notification._id));
       setPaymentModal({ isOpen: false, notification: null });
-      alert("Order has been processed successfully!");
+      
+      // Success alert
+      Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: 'Order has been processed successfully!',
+        timer: 2000,
+        showConfirmButton: false
+      });
     } catch (err) {
       console.error("Error processing order:", err);
       console.log("Error details:", err.response?.data);
-      alert(err.response?.data?.message || "Failed to process order. Please try again.");
+      
+      // Error alert
+      Swal.fire({
+        icon: 'error',
+        title: 'Error!',
+        text: err.response?.data?.message || "Failed to process order. Please try again.",
+      });
     }
   };
 

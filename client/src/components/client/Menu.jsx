@@ -1,15 +1,25 @@
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
+import Swal from 'sweetalert2';
 
 const Menu = () => {
   const [foods, setFoods] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('All');
-  const token = localStorage.getItem('token'); // Store token securely after login
+  const token = localStorage.getItem('token');
 
   const fetchFoods = async () => {
-    const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/food`);
-    setFoods(response.data);
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/food`);
+      setFoods(response.data);
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to fetch menu items.',
+        confirmButtonColor: '#4F46E5'
+      });
+    }
   };
 
   useEffect(() => {
@@ -29,13 +39,28 @@ const Menu = () => {
         {
           headers: {
             Authorization: `Bearer ${token}`,
-          }, // Attach token to request
+          },
         }
       );
-      alert(`${food.name} added to cart!`);
+      
+      // Success alert
+      Swal.fire({
+        icon: 'success',
+        title: 'Added to Cart!',
+        text: `${food.name} has been added to your cart`,
+        showConfirmButton: false,
+        timer: 1500,
+        position: 'top-end',
+        toast: true
+      });
     } catch (error) {
-      console.error('Error adding to cart:', error);
-      alert('Failed to add to cart.');
+      // Error alert
+      Swal.fire({
+        icon: 'error',
+        title: 'Oops...',
+        text: error.response?.data?.message || 'Failed to add item to cart',
+        confirmButtonColor: '#4F46E5'
+      });
     }
   };
 
