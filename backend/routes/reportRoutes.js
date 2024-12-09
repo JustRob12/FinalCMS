@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
 const User = require('../models/User');
-const History = require('../models/history');
+const History = require('../models/History');
 const Food = require('../models/foodModel');
 const verifyToken = require('../middleware/auth');
 const { 

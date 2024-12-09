@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const History = require('../models/history');
+const History = require('../models/History');
 const verifyToken = require('../middleware/auth');
 
 // Fetch order history for a specific user
