@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Notification = require('../models/Notification');
 const verifyToken = require('../middleware/auth');
-const History = require("../models/history");
+const History = require('../models/history');
 
 // Create a notification
 router.post('/', verifyToken, async (req, res) => {
