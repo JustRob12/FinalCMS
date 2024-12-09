@@ -244,7 +244,7 @@ const AddFood = () => {
       {/* Add Food Form */}
       <div className="w-1/3 bg-white shadow-md rounded-lg p-6">
         <h1 className="text-2xl font-bold mb-5 text-center">
-          {editingId ? "Edit Food" : "Add Food"}
+          {editingId ? "Edit" : "Add"}
         </h1>
         <form onSubmit={handleSubmit}>
           <input
@@ -291,6 +291,7 @@ const AddFood = () => {
             <option value="Meals">Meals</option>
             <option value="Snacks">Snacks</option>
             <option value="Drinks">Drinks</option>
+            <option value="Materials">Materials</option>
           </select>
           {editingId && currentImage && (
             <div className="mb-4">
@@ -322,7 +323,7 @@ const AddFood = () => {
               type="submit"
               className="flex-1 bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition duration-200"
             >
-              {editingId ? "Update Food" : "Add Food"}
+              {editingId ? "Update" : "Add"}
             </button>
             
             {editingId && (
@@ -388,6 +389,16 @@ const AddFood = () => {
               }`}
             >
               Drinks
+            </button>
+            <button
+              onClick={() => setSelectedCategory("Materials")}
+              className={`px-3 py-1 rounded ${
+                selectedCategory === "Materials"
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-200"
+              }`}
+            >
+              Materials
             </button>
           </div>
         </div>

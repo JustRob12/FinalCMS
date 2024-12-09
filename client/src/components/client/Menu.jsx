@@ -81,7 +81,7 @@ const Menu = () => {
         className="border rounded-lg p-2 mb-4 w-full"
       />
       <div className="mb-4">
-        {['Meals', 'Snacks', 'Drinks', 'All'].map((category) => (
+        {['Meals', 'Snacks', 'Drinks', 'All', 'Materials'].map((category) => (
           <button
             key={category}
             onClick={() => setFilter(category)}
