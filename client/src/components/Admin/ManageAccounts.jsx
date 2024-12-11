@@ -44,30 +44,41 @@ const ManageAccounts = () => {
     };
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setFormData(prevData => ({
+            ...prevData,
+            [name]: value
+        }));
     };
 
     const handleUpdate = async () => {
         try {
-            await axios.put(
+            if (!editingAccount?._id) {
+                throw new Error('No account selected for editing');
+            }
+
+            const response = await axios.put(
                 `${import.meta.env.VITE_BACKEND_URL}/auth/accounts/${editingAccount._id}`,
                 formData,
                 {
                     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
                 }
             );
-            await fetchAccounts();
-            setEditingAccount(null);
-            
-            Swal.fire({
-                icon: 'success',
-                title: 'Updated!',
-                text: 'Account has been updated successfully',
-                showConfirmButton: false,
-                timer: 1500,
-                position: 'top-end',
-                toast: true
-            });
+
+            if (response.data) {
+                await fetchAccounts(); // Refresh the accounts list
+                setEditingAccount(null); // Close the edit modal
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Updated!',
+                    text: 'Account has been updated successfully',
+                    showConfirmButton: false,
+                    timer: 1500,
+                    position: 'top-end',
+                    toast: true
+                });
+            }
         } catch (error) {
             Swal.fire({
                 icon: 'error',
@@ -91,28 +102,30 @@ const ManageAccounts = () => {
 
         if (result.isConfirmed) {
             try {
-                await axios.delete(
+                const response = await axios.delete(
                     `${import.meta.env.VITE_BACKEND_URL}/auth/accounts/${accountId}`,
                     {
                         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
                     }
                 );
-                await fetchAccounts();
-                
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Deleted!',
-                    text: 'Account has been deleted successfully',
-                    showConfirmButton: false,
-                    timer: 1500,
-                    position: 'top-end',
-                    toast: true
-                });
+
+                if (response.data.message) {
+                    await fetchAccounts(); // Refresh the accounts list
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Deleted!',
+                        text: response.data.message,
+                        showConfirmButton: false,
+                        timer: 1500,
+                        position: 'top-end',
+                        toast: true
+                    });
+                }
             } catch (error) {
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: 'Failed to delete account',
+                    text: error.response?.data?.message || 'Failed to delete account',
                     confirmButtonColor: '#4F46E5'
                 });
             }
@@ -124,6 +137,38 @@ const ManageAccounts = () => {
         account.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         account.course?.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const courseOptions = [
+        "Bachelor of Science in Nursing",
+        "Bachelor of Elementary Education",
+        "Bachelor of Early Childhood Education",
+        "Bachelor of Special Needs Education",
+        "Bachelor Physical Education",
+        "Bachelor of Technology and Livelihood Education major in Home Economics",
+        "Bachelor of Technology and Livelihood Education major in Industrial Arts",
+        "Bachelor of Secondary Education major in Filipino",
+        "Bachelor of Secondary Education major in English",
+        "Bachelor of Secondary Education major in Mathematics",
+        "Bachelor of Secondary Education major in Science",
+        "Bachelor in Industrial Technology Management major in Automotive Technology",
+        "Bachelor of Science in Civil Engineering",
+        "Bachelor of Science in Information Technology",
+        "Bachelor of Science in Mathematics",
+        "Bachelor of Science in Mathematics with Research Statistics",
+        "Bachelor of Science in Business Administration",
+        "Bachelor of Science in Criminology",
+        "Bachelor of Science in Hospitality Management",
+        "Bachelor of Science in Agribusiness Management",
+        "Bachelor of Science in Biology major in Animal Biology",
+        "Bachelor of Science in Agriculture major in Animal Science",
+        "Bachelor of Science in Agriculture major in Crop Science",
+        "Bachelor of Science in Biology",
+        "Bachelor of Science in Biology major in Ecology",
+        "Bachelor of Science in Environmental Science",
+        "Bachelor of Science in Development Communication",
+        "Bachelor of Arts in Political Science",
+        "Bachelor of Science in Psychology"
+    ];
 
     const AccountCard = ({ account, showEditButton }) => (
         <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
@@ -209,13 +254,17 @@ const ManageAccounts = () => {
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             Course
                         </label>
-                        <input
-                            type="text"
+                        <select
                             name="course"
                             value={formData.course || ''}
                             onChange={handleChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
+                        >
+                            <option value="" disabled>Select Course</option>
+                            {courseOptions.map((course, index) => (
+                                <option key={index} value={course}>{course}</option>
+                            ))}
+                        </select>
                     </div>
 
                     <div>
@@ -228,7 +277,7 @@ const ManageAccounts = () => {
                             onChange={handleChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         >
-                            <option value="">Select Year</option>
+                            <option value="" disabled>Select Year</option>
                             <option value="1">1st Year</option>
                             <option value="2">2nd Year</option>
                             <option value="3">3rd Year</option>

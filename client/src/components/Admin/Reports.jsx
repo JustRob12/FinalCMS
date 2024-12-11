@@ -132,34 +132,47 @@ const Reports = () => {
   const exportToExcel = () => {
     if (!reportData) return;
 
-    // Prepare sales data
+    // Prepare sales data with proper formatting
     const salesData = [
-      ['Period', 'Revenue', 'Orders'],
-      ['Today', reportData.revenueMetrics.today, reportData.orderMetrics.today],
-      ['This Week', reportData.revenueMetrics.thisWeek, reportData.orderMetrics.thisWeek],
-      ['This Month', reportData.revenueMetrics.thisMonth, reportData.orderMetrics.thisMonth]
+      ['Period', 'Revenue (₱)', 'Orders'],
+      ['Today', Number(reportData.revenueMetrics.today).toFixed(2), reportData.historyMetrics.today],
+      ['This Week', Number(reportData.revenueMetrics.thisWeek).toFixed(2), reportData.historyMetrics.thisWeek],
+      ['This Month', Number(reportData.revenueMetrics.thisMonth).toFixed(2), reportData.historyMetrics.thisMonth],
+      ['Total', Number(reportData.revenueMetrics.total).toFixed(2), reportData.historyMetrics.total]
     ];
 
-    // Prepare top selling items
-    const topSellingData = reportData.foodMetrics.topSelling.map(item => [
-      item._id,
-      item.totalQuantity,
-      item.totalRevenue
-    ]);
+    // Prepare user metrics data
+    const userMetricsData = [
+      ['User Type', 'Users Count', 'Orders', 'Revenue (₱)'],
+      ['Regular Users', reportData.userMetrics.regularUsers, reportData.userMetrics.regularOrders, Number(reportData.userMetrics.regularRevenue).toFixed(2)],
+      ['Faculty', reportData.userMetrics.facultyUsers, reportData.userMetrics.facultyOrders, Number(reportData.userMetrics.facultyRevenue).toFixed(2)]
+    ];
 
-    // Create workbook with multiple sheets
+    // Prepare recent activity data
+    const activityData = [
+      ['Date', 'Order Code', 'Customer', 'Total (₱)'],
+      ...reportData.recentActivity.history.map(entry => [
+        format(new Date(entry.date), 'yyyy-MM-dd HH:mm'),
+        entry.orderCode,
+        entry.userName,
+        Number(entry.total).toFixed(2)
+      ])
+    ];
+
+    // Create workbook
     const wb = XLSXUtils.book_new();
     
     // Add sales summary sheet
     const ws_sales = XLSXUtils.aoa_to_sheet(salesData);
     XLSXUtils.book_append_sheet(wb, ws_sales, 'Sales Summary');
 
-    // Add top selling items sheet
-    const ws_top = XLSXUtils.aoa_to_sheet([
-      ['Item', 'Quantity Sold', 'Revenue'],
-      ...topSellingData
-    ]);
-    XLSXUtils.book_append_sheet(wb, ws_top, 'Top Selling Items');
+    // Add user metrics sheet
+    const ws_users = XLSXUtils.aoa_to_sheet(userMetricsData);
+    XLSXUtils.book_append_sheet(wb, ws_users, 'User Metrics');
+
+    // Add recent activity sheet
+    const ws_activity = XLSXUtils.aoa_to_sheet(activityData);
+    XLSXUtils.book_append_sheet(wb, ws_activity, 'Recent Activity');
 
     // Generate Excel file
     const excelBuffer = XLSXWrite(wb, { bookType: 'xlsx', type: 'array' });
@@ -169,6 +182,7 @@ const Reports = () => {
     link.href = url;
     link.download = `Sales_Report_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
     link.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const exportToPDF = () => {
@@ -176,38 +190,56 @@ const Reports = () => {
 
     const doc = new jsPDF();
     
-    // Add title
+    // Add title and header
     doc.setFontSize(20);
-    doc.text('Sales Report', 105, 15, { align: 'center' });
+    doc.text('Campus Bite Sales Report', 105, 15, { align: 'center' });
     doc.setFontSize(12);
     doc.text(`Generated on: ${format(new Date(), 'PPP')}`, 105, 25, { align: 'center' });
 
     // Add revenue summary
     doc.autoTable({
       startY: 35,
-      head: [['Period', 'Revenue', 'Orders']],
+      head: [['Period', 'Revenue (₱)', 'Orders']],
       body: [
-        ['Today', `₱${reportData.revenueMetrics.today.toFixed(2)}`, reportData.orderMetrics.today],
-        ['This Week', `₱${reportData.revenueMetrics.thisWeek.toFixed(2)}`, reportData.orderMetrics.thisWeek],
-        ['This Month', `₱${reportData.revenueMetrics.thisMonth.toFixed(2)}`, reportData.orderMetrics.thisMonth]
+        ['Today', Number(reportData.revenueMetrics.today).toFixed(2), reportData.historyMetrics.today],
+        ['This Week', Number(reportData.revenueMetrics.thisWeek).toFixed(2), reportData.historyMetrics.thisWeek],
+        ['This Month', Number(reportData.revenueMetrics.thisMonth).toFixed(2), reportData.historyMetrics.thisMonth],
+        ['Total', Number(reportData.revenueMetrics.total).toFixed(2), reportData.historyMetrics.total]
       ],
-      theme: 'grid'
+      theme: 'grid',
+      headStyles: { fillColor: [79, 70, 229] } // Indigo color
     });
 
-    // Add top selling items
+    // Add user metrics
     doc.autoTable({
       startY: doc.lastAutoTable.finalY + 15,
-      head: [['Item', 'Quantity Sold', 'Revenue']],
-      body: reportData.foodMetrics.topSelling.map(item => [
-        item._id,
-        item.totalQuantity,
-        `₱${item.totalRevenue.toFixed(2)}`
-      ]),
-      theme: 'grid'
+      head: [['User Type', 'Users', 'Orders', 'Revenue (₱)']],
+      body: [
+        ['Regular Users', reportData.userMetrics.regularUsers, reportData.userMetrics.regularOrders, Number(reportData.userMetrics.regularRevenue).toFixed(2)],
+        ['Faculty', reportData.userMetrics.facultyUsers, reportData.userMetrics.facultyOrders, Number(reportData.userMetrics.facultyRevenue).toFixed(2)]
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [79, 70, 229] }
     });
 
+    // Add recent activity
+    if (reportData.recentActivity.history.length > 0) {
+      doc.autoTable({
+        startY: doc.lastAutoTable.finalY + 15,
+        head: [['Date', 'Order Code', 'Customer', 'Total (₱)']],
+        body: reportData.recentActivity.history.map(entry => [
+          format(new Date(entry.date), 'yyyy-MM-dd HH:mm'),
+          entry.orderCode,
+          entry.userName,
+          Number(entry.total).toFixed(2)
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [79, 70, 229] }
+      });
+    }
+
     // Save PDF
-    doc.save(`Sales_Report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    doc.save(`Campus_Bite_Report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
   };
 
   // Add this section after the Summary Cards and before the Recent History Table

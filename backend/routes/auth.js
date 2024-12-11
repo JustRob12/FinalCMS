@@ -88,7 +88,6 @@ router.post('/login', async (req, res) => {
     }
 });
 
-
 // Get all accounts
 router.get('/accounts', async (req, res) => {
     try {
@@ -99,43 +98,46 @@ router.get('/accounts', async (req, res) => {
     }
 });
 
-// Delete a user account by ID
+// Delete account
 router.delete('/accounts/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const deletedUser = await User.findOneAndDelete({ id });
+        const deletedUser = await User.findByIdAndDelete(id);
         
         if (!deletedUser) {
             return res.status(404).json({ message: 'User not found' });
         }
         
-        res.status(200).json({ message: 'User deleted successfully' });
+        res.json({ message: 'User deleted successfully' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: 'Error deleting user', error: error.message });
     }
 });
 
-
-// Update an account by ID
+// Update account
 router.put('/accounts/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, course, year } = req.body;
-
-        // Find and update the user by ID
-        const updatedUser = await User.findOneAndUpdate(
-            { id },
-            { name, course, year },
-            { new: true, runValidators: true } // Return the updated document and run validations
+        const updates = req.body;
+        
+        // If password is being updated, hash it
+        if (updates.password) {
+            updates.password = await bcrypt.hash(updates.password, 10);
+        }
+        
+        const updatedUser = await User.findByIdAndUpdate(
+            id,
+            { $set: updates },
+            { new: true, runValidators: true }
         );
-
+        
         if (!updatedUser) {
             return res.status(404).json({ message: 'User not found' });
         }
-
-        res.status(200).json({ message: 'User updated successfully', user: updatedUser });
+        
+        res.json(updatedUser);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: 'Error updating user', error: error.message });
     }
 });
 
