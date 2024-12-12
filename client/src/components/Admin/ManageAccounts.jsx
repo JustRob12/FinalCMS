@@ -1,8 +1,7 @@
 // src/components/ManageAccounts.jsx
-
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
-import { FaUserShield, FaUsers, FaEdit, FaTrash, FaSearch, FaTimes, FaUserCircle } from 'react-icons/fa';
+import { FaUserShield, FaUsers, FaEdit, FaTrash, FaSearch, FaTimes, FaUserCircle, FaFilter } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 
 const ManageAccounts = () => {
@@ -10,7 +9,8 @@ const ManageAccounts = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [editingAccount, setEditingAccount] = useState(null);
-    const [formData, setFormData] = useState({});
+    const [formData, setFormData] = useState({ name: '' });
+    const [filterRole, setFilterRole] = useState('all');
 
     useEffect(() => {
         fetchAccounts();
@@ -40,17 +40,20 @@ const ManageAccounts = () => {
 
     const handleEdit = (account) => {
         setEditingAccount(account);
-        setFormData(account);
+        setFormData({
+            ...account,
+            name: account.name || ''
+        });
     };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prevData => ({
-            ...prevData,
-            [name]: value
+        setFormData((prevFormData) => ({
+            ...prevFormData,
+            [name]: value,
         }));
     };
-
+    
     const handleUpdate = async () => {
         try {
             if (!editingAccount?._id) {
@@ -66,8 +69,8 @@ const ManageAccounts = () => {
             );
 
             if (response.data) {
-                await fetchAccounts(); // Refresh the accounts list
-                setEditingAccount(null); // Close the edit modal
+                await fetchAccounts();
+                setEditingAccount(null);
 
                 Swal.fire({
                     icon: 'success',
@@ -110,7 +113,7 @@ const ManageAccounts = () => {
                 );
 
                 if (response.data.message) {
-                    await fetchAccounts(); // Refresh the accounts list
+                    await fetchAccounts();
                     Swal.fire({
                         icon: 'success',
                         title: 'Deleted!',
@@ -132,70 +135,45 @@ const ManageAccounts = () => {
         }
     };
 
-    const filteredAccounts = accounts.filter(account => 
-        account.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        account.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        account.course?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredAccounts = accounts.filter(account => {
+        const matchesSearch = 
+            account.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            account.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            account.course?.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        if (filterRole === 'all') return matchesSearch;
+        return matchesSearch && account.role === filterRole;
+    });
 
-    const courseOptions = [
-        "Bachelor of Science in Nursing",
-        "Bachelor of Elementary Education",
-        "Bachelor of Early Childhood Education",
-        "Bachelor of Special Needs Education",
-        "Bachelor Physical Education",
-        "Bachelor of Technology and Livelihood Education major in Home Economics",
-        "Bachelor of Technology and Livelihood Education major in Industrial Arts",
-        "Bachelor of Secondary Education major in Filipino",
-        "Bachelor of Secondary Education major in English",
-        "Bachelor of Secondary Education major in Mathematics",
-        "Bachelor of Secondary Education major in Science",
-        "Bachelor in Industrial Technology Management major in Automotive Technology",
-        "Bachelor of Science in Civil Engineering",
-        "Bachelor of Science in Information Technology",
-        "Bachelor of Science in Mathematics",
-        "Bachelor of Science in Mathematics with Research Statistics",
-        "Bachelor of Science in Business Administration",
-        "Bachelor of Science in Criminology",
-        "Bachelor of Science in Hospitality Management",
-        "Bachelor of Science in Agribusiness Management",
-        "Bachelor of Science in Biology major in Animal Biology",
-        "Bachelor of Science in Agriculture major in Animal Science",
-        "Bachelor of Science in Agriculture major in Crop Science",
-        "Bachelor of Science in Biology",
-        "Bachelor of Science in Biology major in Ecology",
-        "Bachelor of Science in Environmental Science",
-        "Bachelor of Science in Development Communication",
-        "Bachelor of Arts in Political Science",
-        "Bachelor of Science in Psychology"
-    ];
-
-    const AccountCard = ({ account, showEditButton }) => (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
-            <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center">
-                        <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center">
+    const AccountCard = ({ account }) => (
+        <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100">
+            <div className="p-5">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                        <div className={`h-12 w-12 rounded-full flex items-center justify-center ${account.role === 'admin' ? 'bg-indigo-100' : 'bg-emerald-100'}`}>
                             {account.role === 'admin' ? 
                                 <FaUserShield className="text-indigo-600 text-xl" /> : 
-                                <FaUserCircle className="text-indigo-600 text-xl" />
+                                <FaUserCircle className="text-emerald-600 text-xl" />
                             }
                         </div>
-                        <div className="ml-4">
-                            <h3 className="text-lg font-semibold text-gray-900">{account.name}</h3>
+                        <div>
+                            <h3 className="text-lg font-medium text-gray-900">{account.name}</h3>
                             <p className="text-sm text-gray-500">{account.username}</p>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2 ${
+                                account.role === 'admin' ? 'bg-indigo-100 text-indigo-800' : 'bg-emerald-100 text-emerald-800'
+                            }`}>
+                                {account.role === 'admin' ? 'Administrator' : 'Student'}
+                            </span>
                         </div>
                     </div>
-                    <div className="flex space-x-2">
-                        {showEditButton && (
-                            <button
-                                onClick={() => handleEdit(account)}
-                                className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"
-                                title="Edit Account"
-                            >
-                                <FaEdit className="w-5 h-5" />
-                            </button>
-                        )}
+                    <div className="flex items-center space-x-2">
+                        <button
+                            onClick={() => handleEdit(account)}
+                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                            title="Edit Account"
+                        >
+                            <FaEdit className="w-5 h-5" />
+                        </button>
                         <button
                             onClick={() => handleDelete(account._id, account.name)}
                             className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
@@ -205,119 +183,122 @@ const ManageAccounts = () => {
                         </button>
                     </div>
                 </div>
-                <div className="mt-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <p className="text-sm text-gray-500">Course</p>
-                            <p className="font-medium">{account.course || 'N/A'}</p>
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-500">Year</p>
-                            <p className="font-medium">{account.year || 'N/A'}</p>
-                        </div>
+                <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                        <p className="text-gray-500 mb-1">Course</p>
+                        <p className="font-medium text-gray-900">{account.course || 'N/A'}</p>
+                    </div>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                        <p className="text-gray-500 mb-1">Year Level</p>
+                        <p className="font-medium text-gray-900">{account.year ? `${account.year}${['st', 'nd', 'rd', 'th'][account.year - 1]} Year` : 'N/A'}</p>
                     </div>
                 </div>
             </div>
         </div>
     );
 
-    const EditModal = () => (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-semibold text-gray-900">
-                        Edit Account Details
-                    </h2>
-                    <button
-                        onClick={() => setEditingAccount(null)}
-                        className="text-gray-400 hover:text-gray-500 transition-colors"
-                    >
-                        <FaTimes className="w-5 h-5" />
-                    </button>
-                </div>
+    const EditModal = () => {
+        const handleModalClick = (e) => {
+            e.stopPropagation();
+        };
 
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Full Name
-                        </label>
-                        <input
-                            type="text"
-                            name="name"
-                            value={formData.name || ''}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Course
-                        </label>
-                        <select
-                            name="course"
-                            value={formData.course || ''}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        >
-                            <option value="" disabled>Select Course</option>
-                            {courseOptions.map((course, index) => (
-                                <option key={index} value={course}>{course}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Year Level
-                        </label>
-                        <select
-                            name="year"
-                            value={formData.year || ''}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        >
-                            <option value="" disabled>Select Year</option>
-                            <option value="1">1st Year</option>
-                            <option value="2">2nd Year</option>
-                            <option value="3">3rd Year</option>
-                            <option value="4">4th Year</option>
-                        </select>
-                    </div>
-
-                    <div className="flex space-x-3 pt-6">
-                        <button
-                            onClick={handleUpdate}
-                            className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors"
-                        >
-                            Save Changes
-                        </button>
+        return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={handleModalClick}>
+                    <div className="flex justify-between items-center mb-6">
+                        <div>
+                            <h2 className="text-xl font-semibold text-gray-900">Edit Account Details</h2>
+                            <p className="text-sm text-gray-500 mt-1">Update account information</p>
+                        </div>
                         <button
                             onClick={() => setEditingAccount(null)}
-                            className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200 transition-colors"
+                            className="text-gray-400 hover:text-gray-500 transition-colors"
                         >
-                            Cancel
+                            <FaTimes className="w-5 h-5" />
                         </button>
+                    </div>
+
+                    <div className="space-y-5">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Full Name
+                            </label>
+                            <input
+                                type="text"
+                                name="name"
+                                value={formData.name}
+                                onChange={handleChange}
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                placeholder="Enter full name"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Course
+                            </label>
+                            <select
+                                name="course"
+                                value={formData.course || ''}
+                                onChange={handleChange}
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                                <option value="" disabled>Select Course</option>
+                                {courseOptions.map((course, index) => (
+                                    <option key={index} value={course}>{course}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Year Level
+                            </label>
+                            <select
+                                name="year"
+                                value={formData.year || ''}
+                                onChange={handleChange}
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                                <option value="" disabled>Select Year</option>
+                                <option value="1">1st Year</option>
+                                <option value="2">2nd Year</option>
+                                <option value="3">3rd Year</option>
+                                <option value="4">4th Year</option>
+                            </select>
+                        </div>
+
+                        <div className="flex space-x-3 pt-6">
+                            <button
+                                onClick={handleUpdate}
+                                className="flex-1 bg-indigo-600 text-white px-4 py-2.5 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                            >
+                                Save Changes
+                            </button>
+                            <button
+                                onClick={() => setEditingAccount(null)}
+                                className="flex-1 bg-gray-100 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                            >
+                                Cancel
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     if (loading) {
         return (
-            <div className="flex justify-center items-center min-h-screen">
+            <div className="flex justify-center items-center min-h-screen bg-gray-50">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
             </div>
         );
     }
 
-    const adminAccounts = filteredAccounts.filter(account => account.role === 'admin');
-    const userAccounts = filteredAccounts.filter(account => account.role === 'user');
-
     return (
-        <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-7xl mx-auto">
+        <div className="min-h-screen bg-gray-50 py-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-gray-900">Account Management</h1>
                     <p className="mt-2 text-sm text-gray-600">
@@ -325,81 +306,96 @@ const ManageAccounts = () => {
                     </p>
                 </div>
 
-                <div className="mb-6 flex justify-between items-center">
-                    <div className="relative">
-                        <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="Search accounts..."
-                            className="pl-10 pr-4 py-2 w-full md:w-80 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                    <div className="flex space-x-4">
-                        <div className="bg-white px-4 py-2 rounded-lg shadow-sm">
-                            <span className="text-sm text-gray-500">Total Admins:</span>
-                            <span className="ml-2 font-semibold text-indigo-600">{adminAccounts.length}</span>
+                <div className="bg-white p-6 rounded-xl shadow-sm mb-6">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+                        <div className="flex-1 max-w-md">
+                            <div className="relative">
+                                <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search by name, username, or course..."
+                                    className="pl-10 pr-4 py-2.5 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
                         </div>
-                        <div className="bg-white px-4 py-2 rounded-lg shadow-sm">
-                            <span className="text-sm text-gray-500">Total Users:</span>
-                            <span className="ml-2 font-semibold text-indigo-600">{userAccounts.length}</span>
+                        
+                        <div className="flex items-center space-x-4">
+                            <div className="flex items-center space-x-2">
+                                <FaFilter className="text-gray-400" />
+                                <select
+                                    value={filterRole}
+                                    onChange={(e) => setFilterRole(e.target.value)}
+                                    className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                >
+                                    <option value="all">All Roles</option>
+                                    <option value="admin">Administrators</option>
+                                    <option value="user">Students</option>
+                                </select>
+                            </div>
+                            
+                            <div className="flex space-x-4">
+                                <div className="bg-indigo-50 px-4 py-2 rounded-lg">
+                                    <span className="text-sm text-gray-600">Total Accounts:</span>
+                                    <span className="ml-2 font-semibold text-indigo-600">{accounts.length}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="space-y-8">
-                    {adminAccounts.length > 0 && (
-                        <section>
-                            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                                <FaUserShield className="mr-2 text-indigo-600" />
-                                Admin Accounts
-                            </h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {adminAccounts.map(account => (
-                                    <AccountCard 
-                                        key={account._id} 
-                                        account={account} 
-                                        showEditButton={true}
-                                    />
-                                ))}
-                            </div>
-                        </section>
-                    )}
-
-                    {userAccounts.length > 0 && (
-                        <section>
-                            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                                <FaUsers className="mr-2 text-indigo-600" />
-                                User Accounts
-                            </h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {userAccounts.map(account => (
-                                    <AccountCard 
-                                        key={account._id} 
-                                        account={account} 
-                                        showEditButton={true}
-                                    />
-                                ))}
-                            </div>
-                        </section>
-                    )}
-
-                    {filteredAccounts.length === 0 && (
-                        <div className="text-center py-12">
-                            <FaUsers className="mx-auto h-12 w-12 text-gray-400" />
-                            <h3 className="mt-2 text-sm font-medium text-gray-900">No accounts found</h3>
-                            <p className="mt-1 text-sm text-gray-500">
-                                No accounts match your search criteria
-                            </p>
-                        </div>
-                    )}
-                </div>
+                {filteredAccounts.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredAccounts.map(account => (
+                            <AccountCard key={account._id} account={account} />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-12 bg-white rounded-xl shadow-sm">
+                        <FaUsers className="mx-auto h-12 w-12 text-gray-400" />
+                        <h3 className="mt-2 text-sm font-medium text-gray-900">No accounts found</h3>
+                        <p className="mt-1 text-sm text-gray-500">
+                            No accounts match your search criteria
+                        </p>
+                    </div>
+                )}
             </div>
-
             {editingAccount && <EditModal />}
         </div>
     );
 };
+
+const courseOptions = [
+    "Bachelor of Science in Nursing",
+    "Bachelor of Elementary Education",
+    "Bachelor of Early Childhood Education",
+    "Bachelor of Special Needs Education",
+    "Bachelor Physical Education",
+    "Bachelor of Technology and Livelihood Education major in Home Economics",
+    "Bachelor of Technology and Livelihood Education major in Industrial Arts",
+    "Bachelor of Secondary Education major in Filipino",
+    "Bachelor of Secondary Education major in English",
+    "Bachelor of Secondary Education major in Mathematics",
+    "Bachelor of Secondary Education major in Science",
+    "Bachelor in Industrial Technology Management major in Automotive Technology",
+    "Bachelor of Science in Civil Engineering",
+    "Bachelor of Science in Information Technology",
+    "Bachelor of Science in Mathematics",
+    "Bachelor of Science in Mathematics with Research Statistics",
+    "Bachelor of Science in Business Administration",
+    "Bachelor of Science in Criminology",
+    "Bachelor of Science in Hospitality Management",
+    "Bachelor of Science in Agribusiness Management",
+    "Bachelor of Science in Biology major in Animal Biology",
+    "Bachelor of Science in Agriculture major in Animal Science",
+    "Bachelor of Science in Agriculture major in Crop Science",
+    "Bachelor of Science in Biology",
+    "Bachelor of Science in Biology major in Ecology",
+    "Bachelor of Science in Environmental Science",
+    "Bachelor of Science in Development Communication",
+    "Bachelor of Arts in Political Science",
+    "Bachelor of Science in Psychology"
+];
 
 export default ManageAccounts;
