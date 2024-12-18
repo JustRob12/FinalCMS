@@ -55,11 +55,13 @@ router.get('/admin', verifyToken, async (req, res) => {
       totalPrice: entry.totalPrice,
       payment: entry.payment,
       change: entry.change,
-      createdAt: entry.date.toISOString(),
+      createdAt: entry.date,
+      formattedDate: entry.date ? new Date(entry.date).toLocaleString() : null,
       items: entry.items,
-      userName: entry.userId ? entry.userId.name : 'Unknown',
-      userCourse: entry.userId ? entry.userId.course : 'Unknown',
-      userYear: entry.userId ? entry.userId.year : 'Unknown'
+      customerName: entry.userId ? entry.userId.name : 'Unknown',
+      course: entry.userId ? entry.userId.course : 'Unknown',
+      year: entry.userId ? entry.userId.year : 'Unknown',
+      total: entry.totalPrice
     }));
 
     res.json(formattedHistory);

@@ -8,7 +8,7 @@ const Signup = () => {
     const [formData, setFormData] = useState({
         name: '',
         id: '',
-        gsisId: '',
+        coopId: '',
         course: '',
         year: '',
         username: '',
@@ -76,12 +76,12 @@ const Signup = () => {
                         />
                     </div>
 
-                    {/* Show GSIS ID field only when role is faculty */}
+                    {/* Show COOP ID field only when role is faculty */}
                     {formData.role === 'faculty' && (
                         <input
                             type="text"
-                            name="gsisId"
-                            placeholder="GSIS ID"
+                            name="coopId"
+                            placeholder="COOP ID"
                             onChange={handleChange}
                             required
                             className="w-full px-3 py-2 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-indigo-400"

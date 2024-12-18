@@ -50,6 +50,18 @@ const Reports = () => {
     lowStock: {
       items: []
     },
+    foodStock: {
+      items: [],
+      totalItems: 0,
+      lowStockCount: 0,
+      outOfStockCount: 0,
+      categories: {
+        Meals: 0,
+        Snacks: 0,
+        Drinks: 0,
+        Materials: 0
+      }
+    },
     userMetrics: {
       regularUsers: 0,
       regularOrders: 0,
@@ -106,6 +118,28 @@ const Reports = () => {
     }
   };
 
+  const stockChartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top',
+      },
+      title: {
+        display: true,
+        text: 'Food Stock Levels'
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: {
+          display: true,
+          text: 'Quantity'
+        }
+      }
+    }
+  };
+
   const fetchComprehensiveReport = async () => {
     try {
       const response = await axios.get(
@@ -127,6 +161,197 @@ const Reports = () => {
 
   useEffect(() => {
     fetchComprehensiveReport();
+  }, [dateRange]);
+
+  const getChartData = () => {
+    const labels = [];
+    const revenueData = [];
+    const ordersData = [];
+
+    switch(dateRange) {
+      case 'today':
+        // Hourly breakdown for today
+        for(let i = 0; i < 24; i++) {
+          labels.push(`${i}:00`);
+          revenueData.push(reportData.revenueMetrics.hourly?.[i] || 0);
+          ordersData.push(reportData.historyMetrics.hourly?.[i] || 0);
+        }
+        break;
+      case 'week':
+        // Daily breakdown for week
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        days.forEach((day, index) => {
+          labels.push(day);
+          revenueData.push(reportData.revenueMetrics.daily?.[index] || 0);
+          ordersData.push(reportData.historyMetrics.daily?.[index] || 0);
+        });
+        break;
+      case 'month':
+        // Weekly breakdown for month
+        for(let i = 1; i <= 4; i++) {
+          labels.push(`Week ${i}`);
+          revenueData.push(reportData.revenueMetrics.weekly?.[i-1] || 0);
+          ordersData.push(reportData.historyMetrics.weekly?.[i-1] || 0);
+        }
+        break;
+      case 'year':
+        // Monthly breakdown for year
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        months.forEach((month, index) => {
+          labels.push(month);
+          revenueData.push(reportData.revenueMetrics.monthly?.[index] || 0);
+          ordersData.push(reportData.historyMetrics.monthly?.[index] || 0);
+        });
+        break;
+    }
+
+    return {
+      labels,
+      revenueData,
+      ordersData
+    };
+  };
+
+  const renderRevenueChart = () => {
+    const { labels, revenueData } = getChartData();
+    
+    const data = {
+      labels,
+      datasets: [
+        {
+          label: 'Revenue',
+          data: revenueData,
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          borderColor: 'rgba(75, 192, 192, 1)',
+          borderWidth: 1,
+        }
+      ]
+    };
+
+    return (
+      <div className="bg-white p-4 rounded-lg shadow">
+        <h2 className="text-lg font-semibold mb-2">Revenue Trend</h2>
+        <div className="h-64">
+          <Bar
+            options={{
+              ...revenueChartOptions,
+              maintainAspectRatio: false,
+              scales: {
+                ...revenueChartOptions.scales,
+                y: {
+                  ...revenueChartOptions.scales.y,
+                  ticks: {
+                    callback: (value) => `₱${value}`
+                  }
+                }
+              }
+            }}
+            data={{
+              labels,
+              datasets: [{
+                label: 'Revenue',
+                data: revenueData,
+                backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                borderColor: 'rgb(34, 197, 94)',
+                borderWidth: 1
+              }]
+            }}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  const renderOrdersChart = () => {
+    const { labels, ordersData } = getChartData();
+    
+    const data = {
+      labels,
+      datasets: [
+        {
+          label: 'Orders',
+          data: ordersData,
+          backgroundColor: 'rgba(54, 162, 235, 0.2)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 1,
+        }
+      ]
+    };
+
+    return (
+      <div className="bg-white p-4 rounded-lg shadow">
+        <h2 className="text-lg font-semibold mb-2">Orders Trend</h2>
+        <div className="h-64">
+          <Bar
+            options={{
+              ...ordersChartOptions,
+              maintainAspectRatio: false,
+            }}
+            data={{
+              labels,
+              datasets: [{
+                label: 'Orders',
+                data: ordersData,
+                backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                borderColor: 'rgb(59, 130, 246)',
+                borderWidth: 1
+              }]
+            }}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  const fetchReportData = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      
+      // Fetch comprehensive report data
+      const reportResponse = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/reports/comprehensive?range=${dateRange}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Fetch food stock data
+      const foodResponse = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/food`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Process food stock data
+      const foodItems = foodResponse.data;
+      const foodStockData = {
+        items: foodItems,
+        totalItems: foodItems.length,
+        lowStockCount: foodItems.filter(item => item.quantity > 0 && item.quantity <= 10).length,
+        outOfStockCount: foodItems.filter(item => item.quantity === 0).length,
+        categories: foodItems.reduce((acc, item) => {
+          acc[item.category] = (acc[item.category] || 0) + 1;
+          return acc;
+        }, {
+          Meals: 0,
+          Snacks: 0,
+          Drinks: 0,
+          Materials: 0
+        })
+      };
+
+      setReportData({
+        ...reportResponse.data,
+        foodStock: foodStockData
+      });
+      
+      setLoading(false);
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReportData();
   }, [dateRange]);
 
   const exportToExcel = () => {
@@ -294,18 +519,51 @@ const Reports = () => {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Revenue Line Chart */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Revenue Trends</h2>
-          <Line data={chartData} options={revenueChartOptions} />
+        <div className="bg-white p-4 rounded-lg shadow">
+          <h2 className="text-lg font-semibold mb-2">Revenue Trends</h2>
+          <div className="h-64">
+            <Line data={chartData} options={revenueChartOptions} />
+          </div>
         </div>
 
         {/* Orders Bar Chart */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Order Trends</h2>
-          <Bar data={orderChartData} options={ordersChartOptions} />
+        <div className="bg-white p-4 rounded-lg shadow">
+          <h2 className="text-lg font-semibold mb-2">Order Trends</h2>
+          <div className="h-64">
+            <Bar data={orderChartData} options={ordersChartOptions} />
+          </div>
         </div>
       </div>
     );
+  };
+
+  const generateStockChart = () => {
+    if (!reportData.foodStock?.items.length) return null;
+
+    const categoryData = {
+      labels: Object.keys(reportData.foodStock.categories),
+      datasets: [
+        {
+          label: 'Items per Category',
+          data: Object.values(reportData.foodStock.categories),
+          backgroundColor: [
+            'rgba(255, 99, 132, 0.5)',
+            'rgba(54, 162, 235, 0.5)',
+            'rgba(255, 206, 86, 0.5)',
+            'rgba(75, 192, 192, 0.5)'
+          ],
+          borderColor: [
+            'rgba(255, 99, 132, 1)',
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 206, 86, 1)',
+            'rgba(75, 192, 192, 1)'
+          ],
+          borderWidth: 1,
+        }
+      ]
+    };
+
+    return <Bar options={stockChartOptions} data={categoryData} />;
   };
 
   if (loading) {
@@ -423,7 +681,80 @@ const Reports = () => {
       </div>
 
       {/* Charts Section */}
-      {renderCharts()}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {renderRevenueChart()}
+        {renderOrdersChart()}
+      </div>
+
+      {/* Food Stock Report Section */}
+      <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+        <h2 className="text-2xl font-bold mb-4">Food & Materials Stock Report</h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold">Total Items</h3>
+            <p className="text-2xl">{reportData.foodStock?.totalItems || 0}</p>
+          </div>
+          <div className="bg-yellow-50 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold">Low Stock Items</h3>
+            <p className="text-2xl">{reportData.foodStock?.lowStockCount || 0}</p>
+          </div>
+          <div className="bg-red-50 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold">Out of Stock</h3>
+            <p className="text-2xl">{reportData.foodStock?.outOfStockCount || 0}</p>
+          </div>
+          <div className="bg-green-50 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold">Categories</h3>
+            <p className="text-2xl">{Object.keys(reportData.foodStock?.categories || {}).length}</p>
+          </div>
+        </div>
+        
+        <div className="mb-6">
+          {generateStockChart()}
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full table-auto">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="px-4 py-2 text-left">Item Name</th>
+                <th className="px-4 py-2 text-left">Category</th>
+                <th className="px-4 py-2 text-left">Current Stock</th>
+                <th className="px-4 py-2 text-left">Price</th>
+                <th className="px-4 py-2 text-left">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reportData.foodStock?.items.map((item, index) => (
+                <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : ''}>
+                  <td className="px-4 py-2">{item.name}</td>
+                  <td className="px-4 py-2">{item.category}</td>
+                  <td className="px-4 py-2">{item.quantity}</td>
+                  <td className="px-4 py-2">₱{item.price.toFixed(2)}</td>
+                  <td className="px-4 py-2">
+                    <span className={`px-2 py-1 rounded-full text-sm ${
+                      !item.available
+                        ? 'bg-gray-100 text-gray-800'
+                        : item.quantity === 0 
+                        ? 'bg-red-100 text-red-800'
+                        : item.quantity <= 10
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-green-100 text-green-800'
+                    }`}>
+                      {!item.available 
+                        ? 'Not Available'
+                        : item.quantity === 0 
+                        ? 'Out of Stock' 
+                        : item.quantity <= 10 
+                        ? 'Low Stock'
+                        : 'In Stock'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Low Stock Section */}
       <div className="bg-white p-6 rounded-lg shadow mb-8">
@@ -539,61 +870,6 @@ const Reports = () => {
                   ₱{(reportData?.userMetrics?.facultyRevenue || 0).toFixed(2)}
                 </td>
               </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Recent History Table */}
-      <div className="bg-white p-6 rounded-lg shadow mb-8">
-        <h2 className="text-xl font-semibold mb-4">Recent History</h2>
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Order Code
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Customer
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Course
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Year
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Items
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {reportData?.recentActivity?.history?.map((entry, index) => (
-                <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap">{entry?.orderCode}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{entry?.customerName}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{entry?.course}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{entry?.year}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">₱{(entry?.total || 0).toFixed(2)}</td>
-                  <td className="px-6 py-4">
-                    <ul className="list-disc list-inside">
-                      {entry?.items?.map((item, idx) => (
-                        <li key={idx}>
-                          {item?.foodName} x {item?.quantity}
-                        </li>
-                      ))}
-                    </ul>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">{entry?.date}</td>
-                </tr>
-              ))}
             </tbody>
           </table>
         </div>

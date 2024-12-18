@@ -21,16 +21,16 @@ router.post('/signup', async (req, res) => {
             return res.status(400).json({ message: 'ID already exists' });
         }
 
-        // Validate GSIS ID for faculty
+        // Validate COOP ID for faculty
         if (role === 'faculty' && !gsisId) {
-            return res.status(400).json({ message: 'GSIS ID is required for faculty members' });
+            return res.status(400).json({ message: 'COOP ID is required for faculty members' });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = new User({
             name,
             id,
-            gsisId: role === 'faculty' ? gsisId : null,  // Only set GSIS ID for faculty
+            gsisId: role === 'faculty' ? gsisId : null,  // Only set COOP ID for faculty
             course,
             year,
             username,
@@ -80,7 +80,7 @@ router.post('/login', async (req, res) => {
                 name: user.name,
                 course: user.course,
                 year: user.year,
-                gsisId: user.role === 'faculty' ? user.gsisId : undefined  // Include GSIS ID for faculty
+                gsisId: user.role === 'faculty' ? user.gsisId : undefined  // Include COOP ID for faculty
             } 
         });
     } catch (error) {

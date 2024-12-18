@@ -106,35 +106,163 @@ router.get('/comprehensive', verifyToken, async (req, res) => {
       quantity: { $lte: 20 } // Assuming items with 20 or fewer units are considered low stock
     }).select('name quantity price category');
 
-    // Format the response
-    res.json({
-      historyMetrics: {
-        total: totalOrders,
-        today: range === 'today' ? totalOrders : 0,
-        thisWeek: range === 'week' ? totalOrders : 0,
-        thisMonth: range === 'month' ? totalOrders : 0,
-        thisYear: range === 'year' ? totalOrders : 0
-      },
+    // Add time-based metrics based on range
+    let timeMetrics = {};
+    
+    switch (range) {
+      case 'today':
+        // Hourly breakdown for today
+        timeMetrics = await History.aggregate([
+          {
+            $match: {
+              date: { 
+                $gte: startOfDay(today),
+                $lte: endOfDay(today)
+              }
+            }
+          },
+          {
+            $group: {
+              _id: { $hour: '$date' },
+              revenue: { $sum: '$totalPrice' },
+              orders: { $sum: 1 }
+            }
+          },
+          {
+            $sort: { _id: 1 }
+          }
+        ]);
+        break;
+        
+      case 'week':
+        // Daily breakdown for week
+        timeMetrics = await History.aggregate([
+          {
+            $match: {
+              date: { 
+                $gte: startOfWeek(today),
+                $lte: endOfWeek(today)
+              }
+            }
+          },
+          {
+            $group: {
+              _id: { $dayOfWeek: '$date' },
+              revenue: { $sum: '$totalPrice' },
+              orders: { $sum: 1 }
+            }
+          },
+          {
+            $sort: { _id: 1 }
+          }
+        ]);
+        break;
+        
+      case 'month':
+        // Weekly breakdown for month
+        timeMetrics = await History.aggregate([
+          {
+            $match: {
+              date: { 
+                $gte: startOfMonth(today),
+                $lte: endOfMonth(today)
+              }
+            }
+          },
+          {
+            $group: {
+              _id: { $week: '$date' },
+              revenue: { $sum: '$totalPrice' },
+              orders: { $sum: 1 }
+            }
+          },
+          {
+            $sort: { _id: 1 }
+          }
+        ]);
+        break;
+        
+      case 'year':
+        // Monthly breakdown for year
+        timeMetrics = await History.aggregate([
+          {
+            $match: {
+              date: { 
+                $gte: startOfYear(today),
+                $lte: endOfDay(today)
+              }
+            }
+          },
+          {
+            $group: {
+              _id: { $month: '$date' },
+              revenue: { $sum: '$totalPrice' },
+              orders: { $sum: 1 }
+            }
+          },
+          {
+            $sort: { _id: 1 }
+          }
+        ]);
+        break;
+    }
+
+    // Process time metrics into arrays
+    const processedMetrics = {
       revenueMetrics: {
+        hourly: new Array(24).fill(0),
+        daily: new Array(7).fill(0),
+        weekly: new Array(4).fill(0),
+        monthly: new Array(12).fill(0)
+      },
+      historyMetrics: {
+        hourly: new Array(24).fill(0),
+        daily: new Array(7).fill(0),
+        weekly: new Array(4).fill(0),
+        monthly: new Array(12).fill(0)
+      }
+    };
+
+    timeMetrics.forEach(metric => {
+      switch (range) {
+        case 'today':
+          processedMetrics.revenueMetrics.hourly[metric._id] = metric.revenue;
+          processedMetrics.historyMetrics.hourly[metric._id] = metric.orders;
+          break;
+        case 'week':
+          // Adjust for MongoDB's day of week (1-7, Sunday = 1) to array index (0-6)
+          const dayIndex = metric._id - 1;
+          processedMetrics.revenueMetrics.daily[dayIndex] = metric.revenue;
+          processedMetrics.historyMetrics.daily[dayIndex] = metric.orders;
+          break;
+        case 'month':
+          // Get week number within month (0-3)
+          const weekIndex = Math.min(3, Math.floor((metric._id % 4)));
+          processedMetrics.revenueMetrics.weekly[weekIndex] = metric.revenue;
+          processedMetrics.historyMetrics.weekly[weekIndex] = metric.orders;
+          break;
+        case 'year':
+          // Month is 1-based in MongoDB
+          const monthIndex = metric._id - 1;
+          processedMetrics.revenueMetrics.monthly[monthIndex] = metric.revenue;
+          processedMetrics.historyMetrics.monthly[monthIndex] = metric.orders;
+          break;
+      }
+    });
+
+    res.json({
+      revenueMetrics: {
+        ...processedMetrics.revenueMetrics,
         total: totalRevenue,
-        today: range === 'today' ? totalRevenue : 0,
-        thisWeek: range === 'week' ? totalRevenue : 0,
-        thisMonth: range === 'month' ? totalRevenue : 0,
-        thisYear: range === 'year' ? totalRevenue : 0,
         averageOrderValue: totalOrders > 0 ? totalRevenue / totalOrders : 0
+      },
+      historyMetrics: {
+        ...processedMetrics.historyMetrics,
+        total: totalOrders
       },
       userMetrics: formattedUserMetrics,
       recentActivity: {
-        history: recentHistory.map(entry => ({
-          orderCode: entry.orderCode,
-          customerName: entry.userId?.name || 'Unknown',
-          course: entry.userId?.course,
-          year: entry.userId?.year,
-          role: entry.userId?.role,
-          total: entry.totalPrice,
-          items: entry.items,
-          date: format(new Date(entry.date), 'yyyy-MM-dd HH:mm')
-        }))
+        history: recentHistory
       },
       lowStock: {
         items: lowStockItems.map(item => ({

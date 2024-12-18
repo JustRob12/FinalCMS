@@ -53,7 +53,7 @@ const Header = ({ user, onLogout }) => {
                                             <p className="text-sm font-medium text-gray-900">{user?.name}</p>
                                             <p className="text-xs text-gray-500">{user?.role}</p>
                                             {user?.role === 'faculty' && (
-                                                <p className="text-xs text-gray-500">GSIS ID: {user?.gsisId}</p>
+                                                <p className="text-xs text-gray-500">COOP ID: {user?.gsisId}</p>
                                             )}
                                         </div>
                                         <button

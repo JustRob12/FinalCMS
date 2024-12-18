@@ -48,10 +48,10 @@ const ManageAccounts = () => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData((prevFormData) => ({
-            ...prevFormData,
+        setFormData({
+            ...formData,
             [name]: value,
-        }));
+        });
     };
     
     const handleUpdate = async () => {
@@ -150,9 +150,17 @@ const ManageAccounts = () => {
             <div className="p-5">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
-                        <div className={`h-12 w-12 rounded-full flex items-center justify-center ${account.role === 'admin' ? 'bg-indigo-100' : 'bg-emerald-100'}`}>
+                        <div className={`h-12 w-12 rounded-full flex items-center justify-center ${
+                            account.role === 'admin' 
+                                ? 'bg-indigo-100' 
+                                : account.role === 'faculty'
+                                ? 'bg-purple-100'
+                                : 'bg-emerald-100'
+                        }`}>
                             {account.role === 'admin' ? 
                                 <FaUserShield className="text-indigo-600 text-xl" /> : 
+                                account.role === 'faculty' ?
+                                <FaUserCircle className="text-purple-600 text-xl" /> :
                                 <FaUserCircle className="text-emerald-600 text-xl" />
                             }
                         </div>
@@ -160,9 +168,17 @@ const ManageAccounts = () => {
                             <h3 className="text-lg font-medium text-gray-900">{account.name}</h3>
                             <p className="text-sm text-gray-500">{account.username}</p>
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2 ${
-                                account.role === 'admin' ? 'bg-indigo-100 text-indigo-800' : 'bg-emerald-100 text-emerald-800'
+                                account.role === 'admin' 
+                                    ? 'bg-indigo-100 text-indigo-800' 
+                                    : account.role === 'faculty'
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : 'bg-emerald-100 text-emerald-800'
                             }`}>
-                                {account.role === 'admin' ? 'Administrator' : 'Student'}
+                                {account.role === 'admin' 
+                                    ? 'Administrator' 
+                                    : account.role === 'faculty'
+                                    ? 'Faculty'
+                                    : 'Student'}
                             </span>
                         </div>
                     </div>
@@ -184,14 +200,36 @@ const ManageAccounts = () => {
                     </div>
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                        <p className="text-gray-500 mb-1">Course</p>
-                        <p className="font-medium text-gray-900">{account.course || 'N/A'}</p>
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                        <p className="text-gray-500 mb-1">Year Level</p>
-                        <p className="font-medium text-gray-900">{account.year ? `${account.year}${['st', 'nd', 'rd', 'th'][account.year - 1]} Year` : 'N/A'}</p>
-                    </div>
+                    {account.role === 'faculty' ? (
+                        <>
+                            <div className="bg-gray-50 p-3 rounded-lg">
+                                <p className="text-gray-500 mb-1">Department</p>
+                                <p className="font-medium text-gray-900">{account.course || 'N/A'}</p>
+                            </div>
+                            <div className="bg-gray-50 p-3 rounded-lg">
+                                <p className="text-gray-500 mb-1">COOP ID</p>
+                                <p className="font-medium text-gray-900">{account.gsisId || 'N/A'}</p>
+                            </div>
+                        </>
+                    ) : account.role === 'user' ? (
+                        <>
+                            <div className="bg-gray-50 p-3 rounded-lg">
+                                <p className="text-gray-500 mb-1">Course</p>
+                                <p className="font-medium text-gray-900">{account.course || 'N/A'}</p>
+                            </div>
+                            <div className="bg-gray-50 p-3 rounded-lg">
+                                <p className="text-gray-500 mb-1">Year Level</p>
+                                <p className="font-medium text-gray-900">
+                                    {account.year ? `${account.year}${['st', 'nd', 'rd', 'th'][account.year - 1]} Year` : 'N/A'}
+                                </p>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="col-span-2 bg-gray-50 p-3 rounded-lg">
+                            <p className="text-gray-500 mb-1">Role</p>
+                            <p className="font-medium text-gray-900">System Administrator</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -331,6 +369,7 @@ const ManageAccounts = () => {
                                 >
                                     <option value="all">All Roles</option>
                                     <option value="admin">Administrators</option>
+                                    <option value="faculty">Faculty</option>
                                     <option value="user">Students</option>
                                 </select>
                             </div>
