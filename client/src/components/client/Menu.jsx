@@ -102,8 +102,9 @@ const Menu = () => {
               className="w-full h-48 object-cover mb-2 rounded-lg"
             />
             <h2 className="font-bold text-lg">{food.name}</h2>
-            <p className="text-gray-600">{food.description}</p>
+            <p className="text-gray-600 text-center mb-2">{food.description}</p>
             <p className="font-semibold text-lg">₱{food.price}</p>
+            <p className="text-gray-700">Stock: {food.quantity}</p>
             {parseInt(food.quantity) <= 5 && food.available && (
               <p className="text-yellow-500 font-bold text-sm">Only {food.quantity} left!</p>
             )}

@@ -64,7 +64,7 @@ const Cart = () => {
           ...prevCart,
           foodItems: prevCart.foodItems.filter((item) => item.foodId._id !== foodId),
         }));
-        
+
         Swal.fire({
           icon: 'success',
           title: 'Removed!',
@@ -87,6 +87,20 @@ const Cart = () => {
 
   const handleIncrement = async (foodId) => {
     try {
+      // Find the current item in the cart
+      const currentItem = cart.foodItems.find(item => item.foodId._id === foodId);
+
+      // Check if incrementing would exceed available quantity
+      if (currentItem.quantity >= currentItem.foodId.quantity) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Maximum Quantity Reached',
+          text: `Sorry, only ${currentItem.foodId.quantity} items are available in stock.`,
+          confirmButtonColor: '#4F46E5'
+        });
+        return;
+      }
+
       const response = await axios.put(
         `${import.meta.env.VITE_BACKEND_URL}/cart/increment/${foodId}`,
         {},
@@ -157,13 +171,13 @@ const Cart = () => {
       if (result.isConfirmed) {
         const response = await axios.post(
           `${import.meta.env.VITE_BACKEND_URL}/orders`,
-          { 
+          {
             cartItems: cart.foodItems,
             course,
             year,
-            userId 
+            userId
           },
-          { 
+          {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -204,19 +218,19 @@ const Cart = () => {
         <div className="absolute inset-0 bg-indigo-100 rounded-full opacity-50"></div>
         <FaShoppingCart className="w-32 h-32 text-indigo-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
       </div>
-      
+
       <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">
         Your Cart is Empty
       </h2>
-      
+
       <p className="text-gray-600 text-center mb-8 max-w-md">
-        Looks like you haven't added anything to your cart yet. 
+        Looks like you haven't added anything to your cart yet.
         Browse our delicious menu and find something you'll love!
       </p>
-      
-      <Link 
-        to="/menu" 
-        className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-full 
+
+      <Link
+        to="/menu"
+        className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-full
                  hover:bg-indigo-700 transition-colors duration-300 shadow-lg hover:shadow-xl"
       >
         <span>Browse Menu</span>
@@ -248,16 +262,16 @@ const Cart = () => {
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
     </div>
   );
-  
+
   if (error) return (
     <div className="flex justify-center items-center min-h-[60vh]">
       <div className="text-red-500 text-center">
         <p className="text-xl font-semibold mb-2">Oops! Your Cart is Empty</p>
-       
+
       </div>
     </div>
   );
-  
+
   if (!cart || cart.foodItems.length === 0) return <EmptyCart />;
 
   return (

@@ -6,6 +6,7 @@ const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const [processingOrders, setProcessingOrders] = useState(new Set());
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -92,7 +93,9 @@ const Orders = () => {
   };
 
   // Sort orders to prioritize faculty orders
-  const sortedOrders = orders.sort((a, b) => {
+  const sortedOrders = orders
+    .filter(order => order.orderCode.toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => {
     // Faculty orders come first
     if (a.userId?.role === 'faculty' && b.userId?.role !== 'faculty') return -1;
     if (a.userId?.role !== 'faculty' && b.userId?.role === 'faculty') return 1;
@@ -117,8 +120,19 @@ const Orders = () => {
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800">Active Orders</h1>
-          <div className="text-sm text-gray-600">
-            Total Orders: {orders.length}
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search Order Code..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="text-sm text-gray-600">
+              Total Orders: {sortedOrders.length}
+            </div>
           </div>
         </div>
 
@@ -206,7 +220,7 @@ const Orders = () => {
                         <>
                           <FaSpinner className="animate-spin" />
                           Processing...
-                        </>
+                        </> 
                       ) : (
                         <>
                           <FaCheck />
@@ -292,7 +306,7 @@ const Orders = () => {
                         <>
                           <FaSpinner className="animate-spin" />
                           Processing...
-                        </>
+                        </> 
                       ) : (
                         <>
                           <FaCheck />
